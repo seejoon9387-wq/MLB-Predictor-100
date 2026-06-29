@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import requests
+import io
 from modules import summary, search
 
 # 구글 드라이브 파일 ID
@@ -16,10 +18,10 @@ def load_all_data():
     errors = []
     for key, file_id in FILE_IDS.items():
         try:
-            # CSV 대신 JSON 형식으로 읽기 시도
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            df = pd.read_json(url)
-            data[key] = df
+            response = requests.get(url)
+            # JSONL 형식(한 줄에 하나씩 객체)으로 읽기
+            data[key] = pd.read_json(io.StringIO(response.text), lines=True)
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
     return data, errors
