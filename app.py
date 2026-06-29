@@ -5,7 +5,6 @@ import pytz
 from modules.ui_manager import UIManager
 
 def fetch_data():
-    # 데이터 로직 동일
     raw_games = statsapi.schedule(date=datetime.now().strftime('%Y-%m-%d'))
     games = []
     for g in raw_games:
@@ -22,10 +21,10 @@ def main():
     st.set_page_config(layout="wide")
     st.title("⚾ MLB 실시간 경기")
     
-    # 화살표 크기 조절용 스타일
+    # 화살표 버튼을 크게 만들기 위한 CSS
     st.markdown("""
         <style>
-            div.stButton > button.arrow-btn { font-size: 40px !important; height: 180px !important; width: 100% !important; }
+            .arrow-btn button { font-size: 30px !important; height: 180px !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -36,27 +35,28 @@ def main():
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 좌측 화살표(1) - 카드(6) - 우측 화살표(1)
-    cols = st.columns([0.5, 6, 0.5])
+    # 화살표(좌) + 카드영역 + 화살표(우)
+    main_cols = st.columns([1, 12, 1])
     
-    with cols[0]:
-        st.write("<br><br><br>", unsafe_allow_html=True)
-        if st.button("◀", key="prev"):
+    with main_cols[0]:
+        st.markdown('<div class="arrow-btn">', unsafe_allow_html=True)
+        if st.button("◀"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
             
-    with cols[1]:
+    with main_cols[1]:
         def handle_click(game):
-            with st.spinner('정보 로딩 중...'):
-                st.session_state.selected_game = game
-                st.session_state.details = statsapi.game_data(game['id'])
+            st.session_state.selected_game = game
+            st.session_state.details = statsapi.game_data(game['id'])
         UIManager.render_game_navbar(st.session_state.games, handle_click)
 
-    with cols[2]:
-        st.write("<br><br><br>", unsafe_allow_html=True)
-        if st.button("▶", key="next"):
+    with main_cols[2]:
+        st.markdown('<div class="arrow-btn">', unsafe_allow_html=True)
+        if st.button("▶"):
             st.session_state.current_page += 1
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if 'selected_game' in st.session_state and 'details' in st.session_state:
         g = st.session_state.selected_game
