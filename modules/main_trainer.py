@@ -2,7 +2,7 @@ import numpy as np
 
 class MLBUnifiedTrainer:
     def __init__(self):
-        # 데이터 키와 일치하는 가중치 사전
+        # 40개 알고리즘 가중치 관리 (키값은 데이터 딕셔너리의 접미사와 동일해야 함)
         self.weights = {
             'era': -0.3, 'ops': 0.4, 'last_10': 0.2, 'whip': -0.15, 'avg': 0.15
         }
@@ -10,20 +10,20 @@ class MLBUnifiedTrainer:
     def analyze(self, data_dict):
         h_score, a_score = 0, 0
         
+        # 데이터에 있는 키를 기반으로 자동 연산
         for col, weight in self.weights.items():
-            h_col, a_col = f"h_{col}", f"a_{col}"
-            if h_col in data_dict and a_col in data_dict:
-                h_score += float(data_dict[h_col]) * weight
-                a_score += float(data_dict[a_col]) * weight
+            h_key, a_key = f"h_{col}", f"a_{col}"
+            # 데이터 존재 여부 확인 후 계산
+            if h_key in data_dict and a_key in data_dict:
+                h_score += float(data_dict[h_key]) * weight
+                a_score += float(data_dict[a_key]) * weight
         
+        # 확률 도출 (시그모이드)
         final_score = 1 / (1 + np.exp(-(h_score - a_score) * 5))
-        winner = "Home" if final_score >= 0.5 else "Away"
-        confidence = round(abs(final_score - 0.5) * 200, 1)
         
         return {
-            'winner': winner,
-            'confidence': confidence,
+            'winner': "Home" if final_score >= 0.5 else "Away",
+            'confidence': round(abs(final_score - 0.5) * 200, 1),
             'score': final_score,
-            'stats': data_dict, # 입력된 데이터를 그대로 반환
-            'detailed_report': f"{winner} 팀의 우세가 예측됩니다."
+            'stats': data_dict
         }
