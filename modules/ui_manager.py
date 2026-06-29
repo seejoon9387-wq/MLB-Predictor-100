@@ -3,7 +3,7 @@ import streamlit as st
 class UIManager:
     @staticmethod
     def render_game_navbar(game_data_list):
-        """흰색 바탕 테두리 디자인 및 승리팀 점수 빨간색 표시"""
+        """텍스트 크기를 키우고 가독성을 높인 경기 내비게이션 바"""
         items_per_page = 6
         total_pages = (len(game_data_list) + items_per_page - 1) // items_per_page
 
@@ -27,19 +27,19 @@ class UIManager:
         with cols[1]:
             game_cols = st.columns(items_per_page)
             for i, game in enumerate(page_games):
-                # 승리 팀 점수 빨간색 결정 로직
+                # 점수 비교 로직
                 away_color = "red" if game['away_score'] > game['home_score'] else "black"
                 home_color = "red" if game['home_score'] > game['away_score'] else "black"
                 
                 with game_cols[i]:
                     st.markdown(f"""
-                        <div style="background:#ffffff; border:1px solid #dddddd; border-radius:8px; padding:6px; text-align:center; color:black; font-size:10px; box-shadow: 1px 1px 3px #eee;">
-                            <div style="color:#888; margin-bottom:4px;">종료</div>
-                            <div style="display:flex; justify-content:space-between; padding:0 2px;">
-                                <span>{game['away_name']}</span> <b style="color:{away_color};">{game['away_score']}</b>
+                        <div style="background:#ffffff; border:1px solid #dddddd; border-radius:10px; padding:12px 8px; text-align:center; color:black; font-size:14px; font-weight:500; box-shadow: 2px 2px 5px #eee;">
+                            <div style="color:#666; font-size:11px; margin-bottom:6px;">종료</div>
+                            <div style="display:flex; justify-content:space-between; padding:2px 4px;">
+                                <span>{game['away_name']}</span> <b style="color:{away_color}; font-size:16px;">{game['away_score']}</b>
                             </div>
-                            <div style="display:flex; justify-content:space-between; padding:0 2px;">
-                                <span>{game['home_name']}</span> <b style="color:{home_color};">{game['home_score']}</b>
+                            <div style="display:flex; justify-content:space-between; padding:2px 4px;">
+                                <span>{game['home_name']}</span> <b style="color:{home_color}; font-size:16px;">{game['home_score']}</b>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
