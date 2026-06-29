@@ -7,11 +7,11 @@ def main():
     st.title("⚾ MLB 분석 엔진")
     
     try:
-        # 데이터 로드 및 시계열 정렬
+        # 데이터 로드 및 전처리(정규화 포함)
         df = load_data()
-        st.success("데이터 로드 및 시계열 인덱싱 완료!")
+        st.success("데이터 로드, 인덱싱 및 텍스트 정규화 완료!")
         
-        # 컬럼 확인 및 데이터 미리보기
+        # 확인 및 출력
         show_column_names(df)
         st.dataframe(df.head(100), use_container_width=True)
         
