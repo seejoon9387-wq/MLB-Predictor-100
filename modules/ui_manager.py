@@ -3,41 +3,61 @@ import streamlit as st
 class UIManager:
     @staticmethod
     def render_game_navbar(game_data_list):
-        # 페이지 초기화
+        # 1. 카드 크기 고정 스타일 (가장 중요)
+        st.markdown("""
+            <style>
+                .fixed-card { 
+                    width: 160px !important; 
+                    height: 120px !important; 
+                    min-width: 160px !important;
+                    border: 1px solid #ccc; 
+                    border-radius: 8px; 
+                    padding: 10px; 
+                    background: white; 
+                    text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    overflow: hidden; /* 글자가 넘쳐도 카드 크기 유지 */
+                }
+                /* 텍스트 넘침 방지 */
+                .card-text { 
+                    white-space: nowrap; 
+                    overflow: hidden; 
+                    text-overflow: ellipsis;
+                    font-size: 11px;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
         if 'current_page' not in st.session_state: st.session_state.current_page = 0
         
-        # 8개의 컬럼을 생성합니다: [◀][카드1][카드2][카드3][카드4][카드5][카드6][▶]
-        # 각 카드에 적절한 비율을 할당하여 줄바꿈을 방지합니다.
+        # 8개 컬럼 배치는 유지 (레이아웃 틀 고정)
         cols = st.columns([0.5, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 0.5])
         
         start = st.session_state.current_page * 6
         page_games = game_data_list[start:start + 6]
 
-        # 1. 왼쪽 화살표
         with cols[0]:
             if st.button("◀", key="prev"):
                 if st.session_state.current_page > 0:
-                    st.session_state.current_page -= 1
-                    st.rerun()
+                    st.session_state.current_page -= 1; st.rerun()
 
-        # 2. 카드 6개 배치
         for i in range(6):
             with cols[i+1]:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 카드 스타일 (CSS를 최소화하고 스트림릿 내장 마크다운만 사용)
+                    # 고정된 크기의 fixed-card 클래스 적용
                     st.markdown(f"""
-                        <div style="border:1px solid #ccc; border-radius:8px; padding:5px; text-align:center; font-size:10px;">
-                            <div style="color:gray;">{game.get('display_date', '')}</div>
-                            <div style="font-weight:bold;">{game.get('away_name', 'AWY')} {game.get('away_score', 0)}</div>
-                            <div>{game.get('home_name', 'HOM')} {game.get('home_score', 0)}</div>
+                        <div class="fixed-card">
+                            <div class="card-text" style="color:gray;">{game.get('display_date', '')}</div>
+                            <div class="card-text" style="font-weight:bold; margin-top:5px;">{game.get('away_name', 'AWY')} {game.get('away_score', 0)}</div>
+                            <div class="card-text">{game.get('home_name', 'HOM')} {game.get('home_score', 0)}</div>
                         </div>
                     """, unsafe_allow_html=True)
                 else:
-                    st.write("") # 빈 공간 유지
+                    st.write("") 
 
-        # 3. 오른쪽 화살표
         with cols[7]:
             if st.button("▶", key="next"):
-                st.session_state.current_page += 1
-                st.rerun()
+                st.session_state.current_page += 1; st.rerun()
