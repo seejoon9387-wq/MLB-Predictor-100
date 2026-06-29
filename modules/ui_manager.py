@@ -1,33 +1,65 @@
 import streamlit as st
+import statsapi
+from datetime import datetime
+import pytz
+from modules.ui_manager import UIManager
 
-class UIManager:
-    @staticmethod
-    def render_game_navbar(game_data_list, on_card_click):
-        st.markdown("""
-            <style>
-                .custom-card { border: 2px solid #d9ded5; border-radius: 12px; background-color: #fcfcf8; padding: 10px; text-align: center; height: 160px; display: flex; flex-direction: column; justify-content: center; }
-            </style>
-        """, unsafe_allow_html=True)
+def fetch_data():
+    raw_games = statsapi.schedule(date=datetime.now().strftime('%Y-%m-%d'))
+    games = []
+    for g in raw_games:
+        dt = datetime.strptime(g['game_datetime'], "%Y-%m-%dT%H:%M:%SZ")
+        dt = dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Seoul'))
+        games.append({
+            "id": g['game_id'], "away_name": g['away_name'], "away_score": g.get('away_score', 0),
+            "home_name": g['home_name'], "home_score": g.get('home_score', 0)
+        })
+    return games
 
-        start = st.session_state.get('current_page', 0) * 6
-        page_games = game_data_list[start:start + 6]
+def main():
+    st.set_page_config(layout="wide")
+    st.title("⚾ MLB 실시간 경기")
+
+    if 'games' not in st.session_state: st.session_state.games = fetch_data()
+    if 'current_page' not in st.session_state: st.session_state.current_page = 0
+
+    if st.button("🔄 새로고침"):
+        st.session_state.games = fetch_data()
+        st.rerun()
+
+    # 화살표(좌) + 카드영역 + 화살표(우)
+    col1, col2, col3 = st.columns([1, 10, 1])
+    with col1:
+        if st.button("◀ 이전"):
+            if st.session_state.current_page > 0: st.session_state.current_page -= 1
+            st.rerun()
+    with col2:
+        # 클릭 시 상세 정보를 즉시 session_state에 저장
+        def handle_card_click(game):
+            st.session_state.selected_game = game
+            st.session_state.details = statsapi.game_data(game['id'])
+            st.rerun() # 클릭 즉시 상세 정보 표시를 위해 화면 새로고침
+            
+        UIManager.render_game_navbar(st.session_state.games, handle_card_click)
+    with col3:
+        if st.button("다음 ▶"):
+            st.session_state.current_page += 1
+            st.rerun()
+
+    # 상세 정보 출력부
+    if 'selected_game' in st.session_state:
+        st.divider()
+        g = st.session_state.selected_game
+        details = st.session_state.details
+        st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 실시간 상세 정보")
         
-        cols = st.columns(6)
-        for i in range(6):
-            with cols[i]:
-                # 카드 유지를 위해 무조건 컨테이너 배치
-                with st.container(height=240):
-                    if i < len(page_games):
-                        game = page_games[i]
-                        # 이 버튼이 클릭을 처리합니다.
-                        if st.button("상세보기", key=f"btn_{i}"):
-                            on_card_click(game)
-                        st.markdown(f"""
-                            <div class="custom-card">
-                                <strong>{game['away_name']}</strong><br>
-                                {game['away_score']} : {game['home_score']}<br>
-                                <strong>{game['home_name']}</strong>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.write("")
+        # 상세 데이터 출력 (API 정보 기반)
+        try:
+            weather = details['gameData']['weather'].get('condition', '정보 없음')
+            st.write(f"🌤 **날씨**: {weather}")
+            # 이곳에 더 많은 정보를 추가하시면 됩니다.
+        except:
+            st.write("상세 정보를 가져오는 중입니다...")
+
+if __name__ == "__main__":
+    main()
