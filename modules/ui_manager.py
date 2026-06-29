@@ -3,48 +3,45 @@ import streamlit as st
 class UIManager:
     @staticmethod
     def render_game_navbar(game_data_list):
-        # 1. 스타일 정의 (보내주신 디자인과 유사하게 조정)
-        st.markdown("""
-            <style>
-                .game-card-custom { 
-                    border: 1px solid #d1d5db; 
-                    border-radius: 8px; 
-                    padding: 8px 12px; 
-                    background: #ffffff; 
-                    display: flex; 
-                    flex-direction: column; 
-                    gap: 4px; 
-                    width: 100%;
-                    max-width: 150px; /* 고정 너비로 균일하게 */
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                }
-                .status-txt { font-size: 9px; color: #6b7280; text-transform: uppercase; }
-                .score-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
-            </style>
-        """, unsafe_allow_html=True)
-
-        # 페이지 처리
+        # 1. 페이지네이션 관리
         items_per_page = 6
-        start = st.session_state.get('current_page', 0) * items_per_page
-        page_games = game_data_list[start:start + items_per_page]
+        total_pages = max(1, (len(game_data_list) + items_per_page - 1) // items_per_page)
+        
+        if 'current_page' not in st.session_state:
+            st.session_state.current_page = 0
 
-        # 버튼 및 카드 배치
-        cols = st.columns(6) 
+        # 2. 내비게이션 버튼 (상단 독립 영역)
+        nav_cols = st.columns([1, 8, 1])
+        with nav_cols[0]:
+            if st.button("◀ 이전"):
+                if st.session_state.current_page > 0:
+                    st.session_state.current_page -= 1
+                    st.rerun()
+        with nav_cols[2]:
+            if st.button("다음 ▶"):
+                if st.session_state.current_page < total_pages - 1:
+                    st.session_state.current_page += 1
+                    st.rerun()
+
+        # 3. 카드 그리드 (6개 고정)
+        start = st.session_state.current_page * items_per_page
+        page_games = game_data_list[start:start + items_per_page]
+        
+        cols = st.columns(6)
         for i in range(6):
             with cols[i]:
                 if i < len(page_games):
                     game = page_games[i]
-                    # HTML 직접 삽입으로 디자인 정밀 구현
+                    # 가독성을 위한 깔끔한 HTML 카드
                     st.markdown(f"""
-                        <div class="game-card-custom">
-                            <span class="status-txt">{game.get('display_date', '종료')}</span>
-                            <div class="score-row">
-                                <b>{game.get('away_name', 'AWY')}</b>
-                                <span>{game.get('away_score', 0)}</span>
+                        <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; background: white; margin-bottom: 5px;">
+                            <div style="font-size: 10px; color: #6b7280; font-weight: bold; margin-bottom: 5px;">{game.get('display_date', '')}</div>
+                            <div style="font-size: 14px; font-weight: 800; color: #111827; margin-bottom: 10px;">{game.get('display_time', '')}</div>
+                            <div style="font-size: 12px; font-weight: 700; display: flex; justify-content: space-between;">
+                                <span>{game.get('away_name', 'AWY')}</span> <span>{game.get('away_score', 0)}</span>
                             </div>
-                            <div class="score-row">
-                                <span>{game.get('home_name', 'HOM')}</span>
-                                <span>{game.get('home_score', 0)}</span>
+                            <div style="font-size: 12px; font-weight: 700; display: flex; justify-content: space-between;">
+                                <span>{game.get('home_name', 'HOM')}</span> <span>{game.get('home_score', 0)}</span>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
@@ -53,4 +50,4 @@ class UIManager:
                         st.session_state.selected_game_id = game.get('game_id')
                         st.rerun()
                 else:
-                    st.write("")
+                    st.write("") # 빈 공간
