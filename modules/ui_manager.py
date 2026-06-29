@@ -5,7 +5,7 @@ class UIManager:
     def render_game_navbar(game_data_list, on_refresh_click):
         st.markdown("""
             <style>
-                /* 버튼 스타일: 레이아웃 해치지 않게 고정 */
+                /* 버튼 스타일 고정 */
                 div.stButton > button {
                     background-color: #fe7701 !important;
                     color: white !important;
@@ -51,7 +51,6 @@ class UIManager:
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 날짜+시간 양식 고정: {display_date} {display_time}
                     st.markdown(f"""
                         <div class="card-wrapper">
                             <div class="custom-card">
