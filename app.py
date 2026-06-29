@@ -5,6 +5,7 @@ import pytz
 from modules.ui_manager import UIManager
 
 def fetch_data():
+    # 데이터 로직 동일
     raw_games = statsapi.schedule(date=datetime.now().strftime('%Y-%m-%d'))
     games = []
     for g in raw_games:
@@ -21,39 +22,42 @@ def main():
     st.set_page_config(layout="wide")
     st.title("⚾ MLB 실시간 경기")
     
+    # 화살표 크기 조절용 스타일
+    st.markdown("""
+        <style>
+            div.stButton > button.arrow-btn { font-size: 40px !important; height: 180px !important; width: 100% !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    # 새로고침 버튼
     if st.button("🔄 실시간 업데이트"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 화살표(좌) + 카드(6개) + 화살표(우) 배치
-    layout_cols = st.columns([0.5, 6, 0.5])
+    # 좌측 화살표(1) - 카드(6) - 우측 화살표(1)
+    cols = st.columns([0.5, 6, 0.5])
     
-    with layout_cols[0]:
-        st.write("") # 간격 조정
-        st.write("")
-        if st.button("◀"):
+    with cols[0]:
+        st.write("<br><br><br>", unsafe_allow_html=True)
+        if st.button("◀", key="prev"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
             
-    with layout_cols[1]:
+    with cols[1]:
         def handle_click(game):
             with st.spinner('정보 로딩 중...'):
                 st.session_state.selected_game = game
                 st.session_state.details = statsapi.game_data(game['id'])
         UIManager.render_game_navbar(st.session_state.games, handle_click)
 
-    with layout_cols[2]:
-        st.write("") # 간격 조정
-        st.write("")
-        if st.button("▶"):
+    with cols[2]:
+        st.write("<br><br><br>", unsafe_allow_html=True)
+        if st.button("▶", key="next"):
             st.session_state.current_page += 1
             st.rerun()
 
-    # 상세 정보 영역
     if 'selected_game' in st.session_state and 'details' in st.session_state:
         g = st.session_state.selected_game
         st.divider()
