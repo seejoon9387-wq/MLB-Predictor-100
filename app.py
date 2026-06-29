@@ -5,16 +5,21 @@ import pytz
 from modules.ui_manager import UIManager
 
 def fetch_data():
-    # 데이터 호출 시 에러 발생 방지를 위해 예외 처리 추가
     try:
-        raw_games = statsapi.schedule(date=datetime.now().strftime('%Y-%m-%d'))
+        # 오늘 날짜 확인 (2026-06-30 기준)
+        today = datetime.now().strftime('%Y-%m-%d')
+        raw_games = statsapi.schedule(date=today)
         games = []
+        seoul_tz = pytz.timezone('Asia/Seoul')
+        
         for g in raw_games:
-            # 날짜 변환 로직
-            dt = datetime.strptime(g['game_datetime'], "%Y-%m-%dT%H:%M:%SZ")
-            dt = dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Seoul'))
+            dt_utc = datetime.strptime(g['game_datetime'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.utc)
+            dt_seoul = dt_utc.astimezone(seoul_tz)
+            
             games.append({
                 "id": g['game_id'],
+                "display_date": dt_seoul.strftime("%Y-%m-%d"),
+                "display_time": dt_seoul.strftime("%H:%M"),
                 "away_name": g['away_name'],
                 "away_score": g.get('away_score', 0),
                 "home_name": g['home_name'],
@@ -22,11 +27,11 @@ def fetch_data():
             })
         return games
     except Exception as e:
-        st.error(f"데이터를 불러오는 중 에러 발생: {e}")
+        st.error(f"데이터 호출 중 오류 발생: {e}")
         return []
 
 def main():
-    st.title("⚾ MLB 실시간 경기 데이터")
+    st.title("⚾ MLB 실시간 경기 (한국 시간)")
 
     if 'games' not in st.session_state:
         st.session_state.games = fetch_data()
@@ -35,33 +40,28 @@ def main():
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 데이터 호출 확인
-    if not st.session_state.games:
-        st.warning("오늘 경기 데이터가 없습니다.")
-        return
-
-    # 리스트 출력
     def handle_click(game):
         st.session_state.selected_game = game
         try:
             st.session_state.details = statsapi.game_data(game['id'])
-        except Exception as e:
+        except:
             st.session_state.details = None
-            st.error("상세 정보 호출 실패")
         st.rerun()
 
     UIManager.render_game_list(st.session_state.games, handle_click)
 
-    # 상세 정보 출력
     if 'selected_game' in st.session_state:
-        st.divider()
-        st.subheader("상세 정보")
+        g = st.session_state.selected_game
         details = st.session_state.get('details')
+        st.divider()
+        st.subheader(f"📍 {g.get('away_name')} vs {g.get('home_name')} 상세 정보")
         if details:
-            st.write(f"경기 상황: {details['gameData']['status']['detailedState']}")
-            st.write(f"날씨: {details['gameData']['weather'].get('condition', '정보 없음')}")
+            status = details['gameData']['status']['detailedState']
+            weather = details['gameData']['weather'].get('condition', '정보 없음')
+            st.write(f"경기 상황: {status}")
+            st.write(f"날씨: {weather}")
         else:
-            st.write("상세 정보를 불러오는 중입니다.")
+            st.write("상세 정보 로딩 중...")
 
 if __name__ == "__main__":
     main()
