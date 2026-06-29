@@ -13,11 +13,18 @@ def get_live_schedule():
     df = pybaseball.schedule_and_record(year, 'LAD')
     df = df.reset_index()
     
-    # 1. 날짜 데이터 클리닝: 요일 부분(예: "Thursday, ")을 제거
-    # 정규식: 글자, 콤마, 공백이 있는 앞부분을 삭제
-    df['Date'] = df['Date'].apply(lambda x: re.sub(r'^[A-Za-z]+, ', '', str(x)))
+    # 1. 날짜 데이터 정제
+    def clean_date(date_str):
+        # 요일과 콤마 제거 ("Thursday, " -> "")
+        date_str = re.sub(r'^[A-Za-z]+, ', '', str(date_str))
+        # 연도가 없는 경우(예: "Mar 26") 올해 연도 붙이기
+        if ',' not in date_str:
+            date_str = f"{date_str}, {year}"
+        return date_str
+
+    df['Date'] = df['Date'].apply(clean_date)
     
-    # 2. 날짜 형식 변환 (이제는 깔끔하게 Mar 26, 2026 형태만 남음)
+    # 2. 날짜 형식 변환
     df['Date'] = pd.to_datetime(df['Date'], format='%b %d, %Y')
     
     # 3. Home/Away 구분 로직
@@ -45,6 +52,7 @@ def main():
 
         st.subheader("📅 오늘의 경기 및 향후 일정")
         
+        # 경기 일정 선택 표
         event = st.dataframe(
             df[['Display_Date', 'Away', 'Home']], 
             use_container_width=True,
@@ -65,7 +73,7 @@ def main():
                 
     except Exception as e:
         st.error(f"데이터 처리 오류: {e}")
-        st.write("데이터의 날짜 형식 문제일 가능성이 높습니다. 로그를 확인해 주세요.")
+        st.write("문제가 지속되면 데이터의 원본 형식을 확인해야 합니다.")
 
 if __name__ == "__main__":
     main()
