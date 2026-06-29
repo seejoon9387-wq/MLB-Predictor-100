@@ -15,3 +15,7 @@ class DataManager:
         if not player_list: return
         df = pd.DataFrame(player_list)
         df.to_csv(DataManager.PLAYER_DB, mode='a', header=not os.path.exists(DataManager.PLAYER_DB), index=False)
+
+    @staticmethod
+    def get_player_stats():
+        return pd.read_csv(DataManager.PLAYER_DB) if os.path.exists(DataManager.PLAYER_DB) else pd.DataFrame()
