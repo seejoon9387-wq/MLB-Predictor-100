@@ -2,44 +2,41 @@ import streamlit as st
 import pandas as pd
 import ast
 
-# 1. 파일 경로 설정
-FILE_PATHS = {
-    "batters": "batters.csv.csv",
-    "pitchers": "pitchers.csv.csv",
-    "schedule": "schedule.csv.csv",
-    "full_data": "mlb_full_data_slim.csv" 
-}
-
-# 2. 메모리 최적화 로딩
-@st.cache_resource
+# 데이터 로딩 및 정제 (메모리 최적화 포함)
+@st.cache_data
 def load_data(file_path):
-    # 파일이 존재하는지 먼저 확인
-    try:
-        # 데이터 타입 최적화 (메모리 50% 절감)
-        df = pd.read_csv(file_path)
-        
-        # JSON 컬럼이 있다면 아주 제한적으로 처리
-        for col in df.columns:
-            if df[col].dtype == 'object' and df[col].astype(str).str.startswith('{').any():
-                # 필요 없는 데이터는 제거하여 메모리 보호
-                df[col] = df[col].apply(lambda x: str(x)[:50]) 
-        return df
-    except Exception:
-        return pd.DataFrame() # 오류 시 빈 데이터프레임 반환
+    df = pd.read_csv(file_path)
+    
+    # JSON처럼 생긴 문자열 컬럼을 자동으로 찾아서 펼치기
+    for col in df.columns:
+        # 데이터 샘플 체크: 문자열이고 '{'로 시작하는지 확인
+        sample = df[col].dropna()
+        if not sample.empty and isinstance(sample.iloc[0], str) and sample.iloc[0].startswith('{'):
+            # 문자열을 파이썬 딕셔너리로 변환
+            expanded = df[col].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else {})
+            # 딕셔너리 키를 새로운 컬럼으로 확장
+            expanded_df = pd.json_normalize(expanded)
+            expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
+            # 원본 컬럼 삭제 및 확장 컬럼 병합
+            df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
+    return df
 
 def main():
     st.set_page_config(layout="wide")
     st.title("⚾ MLB 분석 엔진")
     
-    # 데이터 로드
-    selected_file = st.selectbox("데이터셋 선택", list(FILE_PATHS.keys()))
-    df = load_data(FILE_PATHS[selected_file])
+    # 깃허브의 가벼운 파일 경로
+    file_path = "mlb_full_data_slim.csv"
     
-    if df.empty:
-        st.error("데이터 파일을 불러올 수 없습니다. 파일 이름을 다시 확인하세요.")
-        return
-
-    st.dataframe(df.head(200), use_container_width=True)
+    try:
+        df = load_data(file_path)
+        st.success("데이터 로드 및 정제 완료!")
+        
+        # 이제 'team_id', 'team_name' 등으로 컬럼이 분리되어 나옵니다.
+        st.dataframe(df.head(50), use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"오류 발생: {e}")
 
 if __name__ == "__main__":
     main()
