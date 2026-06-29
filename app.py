@@ -26,11 +26,17 @@ def main():
     if 'games' not in st.session_state:
         st.session_state.games = fetch_data()
     
+    # UI Manager에 전달할 새로고침 함수
     def refresh():
-        # 데이터 업데이트 중 스피너 표시
+        st.session_state.is_loading = True # 로딩 시작 표시
+        st.rerun()
+
+    # 로딩 중일 때 표시할 부분
+    if st.session_state.get('is_loading', False):
         with st.spinner('실시간 정보를 불러오는 중입니다...'):
             st.session_state.games = fetch_data()
-        st.rerun()
+            st.session_state.is_loading = False # 로딩 완료
+        st.rerun() # 데이터 갱신 후 화면 다시 그림
 
     UIManager.render_game_navbar(st.session_state.games, refresh)
 
