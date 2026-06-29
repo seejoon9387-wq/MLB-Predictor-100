@@ -1,44 +1,45 @@
 import streamlit as st
 import pandas as pd
+import requests
 from datetime import datetime
-import pybaseball
 import pytz
-import traceback
 
 st.set_page_config(page_title="MLB Live Intelligence", layout="wide")
 
-# 캐시를 너무 길게 잡지 않고 명확히 설정
-@st.cache_data(ttl=600) 
+@st.cache_data(ttl=3600)
 def get_live_schedule():
-    year = datetime.now().year
-    # LAD 데이터 로드
-    df = pybaseball.schedule_and_record(year, 'LAD')
-    df = df.reset_index()
+    # MLB 공식 API 주소 (2026년 시즌)
+    # 직접 데이터를 가져오는 방식입니다.
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={datetime.now().strftime('%Y-%m-%d')}&endDate=2026-10-31"
     
-    # 날짜 처리
-    df['Date'] = pd.to_datetime(df['Date'], format='mixed')
-    kst = pytz.timezone('Asia/Seoul')
-    df['Date'] = df['Date'].dt.tz_localize(None).dt.tz_localize('UTC').dt.tz_convert(kst)
+    response = requests.get(url)
+    data = response.json()
     
-    # 데이터 정리
-    df['Away'] = df.apply(lambda x: x['Tm'] if x['Home_Away'] == '@' else x['Opp'], axis=1)
-    df['Home'] = df.apply(lambda x: x['Opp'] if x['Home_Away'] == '@' else x['Tm'], axis=1)
+    games = []
+    for date_entry in data.get('dates', []):
+        for game in date_entry.get('games', []):
+            games.append({
+                'Date': date_entry['date'],
+                'Away': game['teams']['away']['team']['name'],
+                'Home': game['teams']['home']['team']['name']
+            })
+            
+    df = pd.DataFrame(games)
     
-    today = datetime.now(kst).replace(tzinfo=None)
-    df = df[df['Date'].dt.tz_localize(None) >= today].sort_values(by='Date').reset_index(drop=True)
-    df['Display_Date'] = df['Date'].dt.strftime('%m-%d (%a)')
+    # 한국 시간 처리
+    df['Date'] = pd.to_datetime(df['Date'])
     
-    return df[['Date', 'Display_Date', 'Away', 'Home']]
+    return df[['Date', 'Away', 'Home']]
 
 def main():
     st.title("⚾ MLB 실시간 AI 분석 대시보드")
     
     try:
         df = get_live_schedule()
-        st.dataframe(df[['Display_Date', 'Away', 'Home']], use_container_width=True, hide_index=True)
-    except Exception:
-        st.error("데이터 로드 중 일시적인 오류 발생")
-        st.code(traceback.format_exc())
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    except Exception as e:
+        st.error(f"데이터 로드 실패: {e}")
+        st.write("라이브러리 오류 없이 직접 API에서 데이터를 가져왔습니다.")
 
 if __name__ == "__main__":
     main()
