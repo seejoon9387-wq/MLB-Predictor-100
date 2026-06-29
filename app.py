@@ -2,12 +2,12 @@ import streamlit as st
 import pandas as pd
 from modules import summary, search
 
-# 깃허브에 올린 파일명과 정확히 일치하게 입력하세요 (대소문자 주의!)
+# 깃허브에 업로드된 파일명과 정확히 일치시켰습니다 (.csv.csv 확인)
 FILE_PATHS = {
-    "batters": "batters.csv",
-    "pitchers": "pitchers.csv",
-    "full_data": "full_data.csv",
-    "schedule": "schedule.csv"
+    "batters": "batters.csv.csv",
+    "pitchers": "pitchers.csv.csv",
+    "full_data": "full_data.csv.csv",
+    "schedule": "schedule.csv.csv"
 }
 
 @st.cache_data
@@ -16,7 +16,7 @@ def load_all_data():
     errors = []
     for key, file_path in FILE_PATHS.items():
         try:
-            # 깃허브 경로에 있는 파일을 직접 읽음
+            # 깃허브의 파일 경로를 읽어옵니다.
             data[key] = pd.read_csv(file_path)
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
