@@ -1,3 +1,4 @@
 streamlit
 pandas
-pybaseball>=2.2.6
+pybaseball
+pytz
