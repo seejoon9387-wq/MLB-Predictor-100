@@ -6,8 +6,9 @@ import zipfile
 from modules.registry import create_main_registry
 from modules.features import add_rolling_features
 from modules.weather_processor import process_weather_features
+from modules.bullpen import calculate_bullpen_fatigue
 
-# 구장 특성 팩터 (Park Factors)
+# 구장 특성 팩터
 PARK_FACTORS = {'Fenway Park': 1.05, 'Dodger Stadium': 0.95, 'Yankee Stadium': 1.02}
 
 @st.cache_data
@@ -21,10 +22,10 @@ def load_data(analysis_mode="연속적"):
         with z.open(z.namelist()[0]) as f:
             df = pd.read_csv(f)
     
-    # 1. 컬럼명 소문자 통일 및 필수 ID 확보
+    # 1. 컬럼명 정제
     df.columns = [c.lower().strip() for c in df.columns]
     
-    # 2. JSON 컬럼 분해 및 정제
+    # 2. JSON 컬럼 분해
     for col in df.columns:
         if df[col].dtype == 'object' and df[col].astype(str).str.startswith('{').any():
             try:
@@ -34,13 +35,12 @@ def load_data(analysis_mode="연속적"):
                 df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
             except: continue
     
-    # 3. 외부 환경 변수 보정 (구장 & 기상)
-    # 구장 특성 보정
+    # 3. 환경 및 피로도 보정
     if 'home_team' in df.columns:
         df['pf_adjusted_home_score'] = df['home_score'] / df['home_team'].map(PARK_FACTORS).fillna(1.0)
     
-    # 기상 상황 수치화
     df = process_weather_features(df)
+    df = calculate_bullpen_fatigue(df)
     
     # 4. 레지스트리 생성
     if analysis_mode == "독립적":
@@ -48,7 +48,7 @@ def load_data(analysis_mode="연속적"):
     else:
         registry = create_main_registry(df)
     
-    # 5. 이동 평균(3, 5, 10, 30경기) 추가
+    # 5. 이동 평균 및 최종 정제
     registry = add_rolling_features(registry)
     
     return registry
