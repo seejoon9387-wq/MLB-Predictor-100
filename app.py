@@ -15,8 +15,7 @@ def fetch_data():
             "away_name": g['away_name'],
             "away_score": g.get('away_score', 0),
             "home_name": g['home_name'],
-            "home_score": g.get('home_score', 0),
-            "status": g.get('status', 'Scheduled')
+            "home_score": g.get('home_score', 0)
         })
     return games
 
@@ -27,48 +26,32 @@ def main():
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    if st.button("🔄 실시간 업데이트"):
+    if st.button("🔄 새로고침"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    col1, col2, col3 = st.columns([1, 10, 1])
-    with col1:
+    # 화살표와 카드 영역
+    col_l, col_m, col_r = st.columns([1, 10, 1])
+    
+    with col_l:
         if st.button("◀ 이전"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
-    with col2:
-        def handle_card_click(game):
-            # 클릭 시 상세 데이터를 즉시 저장
-            st.session_state.selected_game = game
-            try:
-                st.session_state.details = statsapi.game_data(game['id'])
-            except:
-                st.session_state.details = None
-            st.rerun()
             
-        UIManager.render_game_navbar(st.session_state.games, handle_card_click)
-    with col3:
+    with col_m:
+        UIManager.render_game_navbar(st.session_state.games, lambda g: st.session_state.update(selected_game=g, details=statsapi.game_data(g['id'])))
+        
+    with col_r:
         if st.button("다음 ▶"):
             st.session_state.current_page += 1
             st.rerun()
 
-    # 상세 정보 출력 부분 (안전한 접근)
+    # 상세 정보
     if 'selected_game' in st.session_state:
         st.divider()
         g = st.session_state.selected_game
-        st.subheader(f"📍 {g.get('away_name')} vs {g.get('home_name')} 실시간 상세 정보")
-        
-        details = st.session_state.get('details')
-        if details:
-            # gameData 내부의 실제 정보를 안전하게 가져옴
-            game_data = details.get('gameData', {})
-            weather = game_data.get('weather', {}).get('condition', '정보 없음')
-            status = game_data.get('status', {}).get('abstractGameState', '정보 없음')
-            
-            st.write(f"🌤 **날씨**: {weather}")
-            st.write(f"📊 **경기 상태**: {status}")
-        else:
-            st.warning("상세 정보를 가져올 수 없습니다.")
+        st.subheader(f"📍 {g.get('away_name')} vs {g.get('home_name')} 상세 정보")
+        st.write("상세 정보가 로드되었습니다.")
 
 if __name__ == "__main__":
     main()
