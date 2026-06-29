@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
+import ast
 import io
 from modules import summary, search
 
@@ -20,9 +21,17 @@ def load_all_data():
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
             response = requests.get(url)
             
-            # [수정] CSV 파일로 읽어오도록 설정
-            # 만약 콤마(,)가 아니라 탭이나 다른 것으로 구분되어 있다면 sep을 수정해야 합니다.
-            data[key] = pd.read_csv(io.StringIO(response.text))
+            # 각 줄을 문자열로 읽은 뒤 딕셔너리로 강제 변환
+            lines = response.text.strip().split('\n')
+            parsed_data = []
+            for line in lines:
+                try:
+                    # literal_eval을 사용해 문자열 형태의 딕셔너리를 실제 딕셔너리로 변환
+                    parsed_data.append(ast.literal_eval(line.strip()))
+                except:
+                    continue
+            
+            data[key] = pd.DataFrame(parsed_data)
             
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
@@ -33,19 +42,15 @@ def main():
     st.title("⚾ MLB 분석 엔진")
     
     data, errors = load_all_data()
-    
     if errors:
-        for err in errors:
-            st.error(f"{err}")
+        for err in errors: st.error(err)
         st.stop()
         
     st.sidebar.title("메뉴")
     menu = st.sidebar.radio("분석 선택", ["데이터 요약", "선수 검색"])
-
-    if menu == "데이터 요약":
-        summary.show(data)
-    elif menu == "선수 검색":
-        search.show(data)
+    
+    if menu == "데이터 요약": summary.show(data)
+    elif menu == "선수 검색": search.show(data)
 
 if __name__ == "__main__":
     main()
