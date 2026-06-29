@@ -11,7 +11,6 @@ class UIManager:
                 .text-date { font-size: 12px !important; color: #697465 !important; font-weight: 500; }
                 .text-team { font-weight: 800 !important; font-size: 14px !important; color: #111827; }
                 .text-score { font-weight: 900 !important; font-size: 19px !important; color: #fe7701; }
-                div.stButton > button { width: 100% !important; }
             </style>
         """, unsafe_allow_html=True)
 
@@ -23,7 +22,6 @@ class UIManager:
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 버튼을 누르면 해당 경기 상세 정보를 실시간 로드
                     if st.button("상세보기", key=f"select_{i}"):
                         on_card_click(game)
                     st.markdown(f"""
