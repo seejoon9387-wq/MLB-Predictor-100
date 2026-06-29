@@ -1,19 +1,18 @@
 import streamlit as st
 
 def show_column_names(df):
-    """
-    데이터프레임의 모든 컬럼명을 출력하여 사용자가 확인할 수 있게 합니다.
-    """
-    st.subheader("🔍 데이터 컬럼 확인")
-    st.write("데이터셋에 포함된 컬럼 목록입니다:")
+    st.subheader("🔍 데이터 컬럼 확인 (디버깅 모드)")
     
-    # 컬럼명을 리스트 형태로 출력
+    # 리스트를 그냥 출력하지 말고, 어떤 컬럼이 있는지 전체를 보여줍니다.
     cols = df.columns.tolist()
-    st.write(cols)
+    st.write("전체 컬럼 리스트:", cols)
     
-    # 만약 'date'라는 단어가 포함된 컬럼이 있는지 검색
-    date_cols = [c for c in cols if 'date' in c.lower()]
-    if date_cols:
-        st.success(f"날짜와 관련된 컬럼을 찾았습니다: {date_cols}")
-    else:
-        st.warning("날짜와 관련된 컬럼을 찾지 못했습니다. 목록을 확인해 주세요.")
+    # 대소문자 구분 없이 'date'를 포함하는지 다시 정밀 검사
+    found = False
+    for col in cols:
+        if 'date' in col.lower():
+            st.success(f"발견! 날짜 관련 컬럼명: {col}")
+            found = True
+    
+    if not found:
+        st.error("주의: 컬럼 목록에 'date'라는 단어가 포함된 것이 하나도 없습니다. 데이터를 다시 확인해야 합니다.")
