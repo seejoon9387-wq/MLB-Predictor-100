@@ -5,13 +5,15 @@ class UIManager:
     def render_game_navbar(game_data_list, on_card_click):
         st.markdown("""
             <style>
-                div[data-testid="stButton"] button {
+                /* 투명 버튼: 오직 .card-wrapper 내부의 버튼만 스타일 강제 적용 */
+                .card-wrapper div[data-testid="stButton"] button {
                     background: transparent !important;
                     border: none !important;
                     position: absolute !important;
                     width: 100% !important;
                     height: 180px !important;
                     z-index: 10 !important;
+                    cursor: pointer;
                 }
                 .custom-card { width: 100% !important; height: 180px !important; border: 2px solid #d9ded5 !important; border-radius: 12px !important; background-color: #fcfcf8; display: flex !important; flex-direction: column !important; justify-content: space-around !important; align-items: center !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; padding: 10px 0 !important; }
                 .card-wrapper { position: relative; padding: 5px; }
@@ -24,11 +26,6 @@ class UIManager:
 
         if 'current_page' not in st.session_state: st.session_state.current_page = 0
         
-        # 데이터가 없을 경우를 대비한 방어 코드
-        if not game_data_list:
-            st.warning("데이터가 없습니다.")
-            return
-
         card_cols = st.columns(6)
         start = st.session_state.current_page * 6
         page_games = game_data_list[start:start + 6]
@@ -38,8 +35,8 @@ class UIManager:
                 if i < len(page_games):
                     game = page_games[i]
                     st.markdown('<div class="card-wrapper">', unsafe_allow_html=True)
-                    # 투명 버튼: 클릭 시 상세 정보 갱신
-                    if st.button(" ", key=f"btn_{i}"):
+                    # 투명 버튼: 카드 클릭을 감지
+                    if st.button(" ", key=f"card_btn_{i}"):
                         on_card_click(game)
                     st.markdown(f"""
                         <div class="custom-card">
@@ -49,3 +46,5 @@ class UIManager:
                             <div class="text-row text-team">{game.get('home_name', 'HOM')}</div>
                         </div>
                     </div>""", unsafe_allow_html=True)
+                else:
+                    st.write("")
