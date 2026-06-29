@@ -11,8 +11,7 @@ def fetch_data():
         dt = datetime.strptime(g['game_datetime'], "%Y-%m-%dT%H:%M:%SZ")
         dt = dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Seoul'))
         games.append({
-            "id": g['game_id'], "display_date": g['game_date'], "display_time": dt.strftime("%H:%M"),
-            "away_name": g['away_name'], "away_score": g.get('away_score', 0),
+            "id": g['game_id'], "away_name": g['away_name'], "away_score": g.get('away_score', 0),
             "home_name": g['home_name'], "home_score": g.get('home_score', 0)
         })
     return games
@@ -24,17 +23,17 @@ def main():
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    # 상단 컨트롤
-    if st.button("🔄 실시간 업데이트"):
+    # 상단 제어
+    if st.button("🔄 실시간 데이터 새로고침"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 화살표(좌) + 카드 영역 + 화살표(우)
+    # 화살표(좌) + 카드영역 + 화살표(우)
     main_cols = st.columns([1, 10, 1])
     
     with main_cols[0]:
-        st.write("\n\n\n")
-        if st.button("◀ 이전"):
+        st.write("\n\n\n\n\n") # 수직 정렬
+        if st.button("◀◀◀", key="prev"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
             
@@ -42,14 +41,14 @@ def main():
         UIManager.render_game_navbar(st.session_state.games, lambda g: st.session_state.update(selected_game=g, details=statsapi.game_data(g['id'])))
 
     with main_cols[2]:
-        st.write("\n\n\n")
-        if st.button("다음 ▶"):
+        st.write("\n\n\n\n\n") # 수직 정렬
+        if st.button("▶▶▶", key="next"):
             st.session_state.current_page += 1
             st.rerun()
 
     if 'selected_game' in st.session_state and 'details' in st.session_state:
-        g = st.session_state.selected_game
         st.divider()
+        g = st.session_state.selected_game
         st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 상세 정보")
         weather = st.session_state.details['gameData']['weather'].get('condition', '정보 없음')
         st.write(f"🌤 **날씨**: {weather}")
