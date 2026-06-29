@@ -9,7 +9,7 @@ class UIManager:
         if 'current_page' not in st.session_state or st.session_state.current_page >= total_pages:
             st.session_state.current_page = 0
 
-        # 버튼 영역
+        # 버튼 및 페이지 표시 영역
         c1, c2, c3 = st.columns([1, 10, 1])
         with c1:
             if st.button("◀ 이전"):
@@ -31,17 +31,26 @@ class UIManager:
             with cols[i]:
                 if i < len(page_games):
                     game = page_games[i]
+                    date_val = game.get('display_date', '--/--')
+                    time_val = game.get('display_time', '--:--')
+                    away = game.get('away_name', 'AWAY')
+                    home = game.get('home_name', 'HOME')
+                    a_score = game.get('away_score', 0)
+                    h_score = game.get('home_score', 0)
                     
-                    # app.py에서 계산한 값 가져오기
-                    date_val = game.get('display_date', '확인중')
-                    time_val = game.get('display_time', '확인중')
-                    
+                    # 가독성 최적화 HTML
                     st.markdown(f"""
-                        <div style="background:#ffffff; border:1px solid #d1d5db; border-radius:10px; padding:10px; text-align:center; height:180px;">
-                            <div style="font-size:12px; font-weight:bold; color:#4b5563;">{date_val}</div>
-                            <div style="font-size:14px; font-weight:bold; color:#dc2626; margin-bottom:10px;">{time_val}</div>
-                            <div style="font-size:13px; font-weight:bold;">{game.get('away_name', 'AWAY')}: {game.get('away_score', 0)}</div>
-                            <div style="font-size:13px; font-weight:bold;">{game.get('home_name', 'HOME')}: {game.get('home_score', 0)}</div>
+                        <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:16px; padding:12px; text-align:center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); height:190px; display:flex; flex-direction:column; justify-content:center;">
+                            <div style="font-size:11px; color:#6b7280; font-weight:600; letter-spacing:0.05em;">{date_val}</div>
+                            <div style="font-size:18px; color:#1f2937; font-weight:800; margin-bottom:12px;">{time_val}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0; font-size:14px; font-weight:700;">
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%;">{away}</span>
+                                <span style="color:#ef4444;">{a_score}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin:4px 0; font-size:14px; font-weight:700;">
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70%;">{home}</span>
+                                <span style="color:#ef4444;">{h_score}</span>
+                            </div>
                         </div>
                     """, unsafe_allow_html=True)
                 else:
