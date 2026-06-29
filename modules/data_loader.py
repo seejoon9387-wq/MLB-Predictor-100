@@ -28,3 +28,5 @@ def load_data(analysis_mode=False): # 인자 추가
     df = add_odds_market_features(df)
     
     return create_main_registry(df)
+# data_loader.py의 load_data 함수 내부에 추가
+print(f"로드된 전체 데이터 행 수: {len(df)}")
