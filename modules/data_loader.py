@@ -7,6 +7,7 @@ from modules.time_series import set_time_index
 from modules.text_normalize import normalize_text_data
 from modules.imputer import handle_missing_values
 from modules.optimizer import optimize_data_types
+from modules.registry import create_main_registry
 
 FILE_NAME = "mlb_full_data_slim.zip"
 
@@ -20,7 +21,6 @@ def load_data():
         with z.open(file_list[0]) as f:
             df = pd.read_csv(f)
     
-    # JSON 정제 로직
     for col in df.columns:
         sample = df[col].dropna()
         if not sample.empty and isinstance(sample.iloc[0], str) and sample.iloc[0].startswith('{'):
@@ -29,10 +29,12 @@ def load_data():
             expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
             df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
             
-    # 엔진 진화 파이프라인 적용
-    df = set_time_index(df)           # 1. 시계열 인덱싱
-    df = normalize_text_data(df)      # 2. 텍스트 정규화
-    df = handle_missing_values(df)    # 3. 결측치 처리
-    df = optimize_data_types(df)      # 4. 메모리 최적화 (신규)
+    df = set_time_index(df)
+    df = normalize_text_data(df)
+    df = handle_missing_values(df)
+    df = optimize_data_types(df)
     
-    return df
+    # 경기 중심 통합 테이블 생성
+    registry = create_main_registry(df)
+    
+    return registry
