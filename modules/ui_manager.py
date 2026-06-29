@@ -27,25 +27,20 @@ class UIManager:
         end = start + items_per_page
         page_games = game_data_list[start:end]
 
-        # 카드 영역: 6개 칼럼 생성
+        # 카드 영역
         cols = st.columns(items_per_page)
         for i in range(items_per_page):
             with cols[i]:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 승패 컬러 결정
-                    a_color = "red" if game['away_score'] > game['home_score'] else "black"
-                    h_color = "red" if game['home_score'] > game['away_score'] else "black"
+                    # 승패 컬러 로직
+                    is_away_win = game['away_score'] > game['home_score']
+                    is_home_win = game['home_score'] > game['away_score']
                     
-                    # 카드 테두리 및 디자인 (Streamlit 스타일)
                     with st.container(border=True):
-                        st.caption(game['match_time'])
-                        # 점수 표시
-                        col_away, col_home = st.columns(2)
-                        col_away.write(f"{game['away_name']}")
-                        col_away.markdown(f":red[{game['away_score']}]" if a_color == "red" else f"{game['away_score']}")
-                        col_home.write(f"{game['home_name']}")
-                        col_home.markdown(f":red[{game['home_score']}]" if h_color == "red" else f"{game['home_score']}")
+                        st.write(f"**{game['match_time']}**")
+                        # 텍스트로 깔끔하게 표시
+                        st.write(f"{game['away_name']}: {game['away_score'] if not is_away_win else '🔴' + str(game['away_score'])}")
+                        st.write(f"{game['home_name']}: {game['home_score'] if not is_home_win else '🔴' + str(game['home_score'])}")
                 else:
-                    # 데이터가 없으면 빈 공간
-                    st.empty()
+                    st.write("")
