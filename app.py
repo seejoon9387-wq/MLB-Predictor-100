@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import requests
-import json
 import io
 from modules import summary, search
 
@@ -21,10 +20,9 @@ def load_all_data():
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
             response = requests.get(url)
             
-            # 줄 단위로 읽어 리스트로 변환
-            lines = response.text.strip().split('\n')
-            json_list = [json.loads(line) for line in lines if line.strip()]
-            data[key] = pd.DataFrame(json_list)
+            # [수정] CSV 파일로 읽어오도록 설정
+            # 만약 콤마(,)가 아니라 탭이나 다른 것으로 구분되어 있다면 sep을 수정해야 합니다.
+            data[key] = pd.read_csv(io.StringIO(response.text))
             
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
@@ -38,7 +36,7 @@ def main():
     
     if errors:
         for err in errors:
-            st.error(err)
+            st.error(f"{err}")
         st.stop()
         
     st.sidebar.title("메뉴")
