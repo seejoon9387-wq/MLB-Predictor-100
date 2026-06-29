@@ -2,7 +2,7 @@ import streamlit as st
 from modules.ui_manager import UIManager
 
 def get_today_games():
-    # 예시 데이터 (실제로는 API에서 가져오세요)
+    # 데이터가 7개일 때 2페이지로 자연스럽게 넘어가는지 테스트
     return [
         {'match_time': '07:15', 'away_name': 'HOU', 'away_score': 7, 'home_name': 'DET', 'home_score': 5},
         {'match_time': '08:00', 'away_name': 'WSH', 'away_score': 6, 'home_name': 'BAL', 'home_score': 4},
@@ -10,7 +10,7 @@ def get_today_games():
         {'match_time': '09:00', 'away_name': 'PHI', 'away_score': 5, 'home_name': 'NYM', 'home_score': 4},
         {'match_time': '09:30', 'away_name': 'CIN', 'away_score': 3, 'home_name': 'PIT', 'home_score': 9},
         {'match_time': '10:00', 'away_name': 'TEX', 'away_score': 2, 'home_name': 'TOR', 'home_score': 2},
-        {'match_time': '10:30', 'away_name': 'ATL', 'away_score': 4, 'home_name': 'SFG', 'home_score': 1}, # 7번째 경기 (다음 페이지 테스트)
+        {'match_time': '10:30', 'away_name': 'ATL', 'away_score': 4, 'home_name': 'SFG', 'home_score': 1},
     ]
 
 def main():
