@@ -23,27 +23,23 @@ def main():
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    # 상단 제어
-    if st.button("🔄 실시간 업데이트"):
+    if st.button("🔄 실시간 데이터 업데이트"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 화살표와 카드 영역 배치 (비율 고정)
-    main_cols = st.columns([1, 12, 1])
+    # 전체 영역을 8개의 칸으로 나누어 화살표와 카드 배치
+    col_left, col_mid, col_right = st.columns([1, 6, 1])
     
-    with main_cols[0]:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        if st.button("◀◀◀", key="prev"):
+    with col_left:
+        if st.button("◀ 이전"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
             
-    with main_cols[1]:
-        # Grid 방식으로 카드가 항상 나타나게 함
+    with col_mid:
         UIManager.render_game_navbar(st.session_state.games, lambda g: st.session_state.update(selected_game=g, details=statsapi.game_data(g['id'])))
 
-    with main_cols[2]:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        if st.button("▶▶▶", key="next"):
+    with col_right:
+        if st.button("다음 ▶"):
             st.session_state.current_page += 1
             st.rerun()
 
