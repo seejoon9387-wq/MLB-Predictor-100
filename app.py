@@ -12,30 +12,47 @@ FILE_PATHS = {
 
 GOOGLE_DRIVE_URL = "https://drive.google.com/uc?export=download&id=1vj_n2MOPjAQ50U4N5KAxKxwuoL3UCaI4"
 
-@st.cache_data
 def load_data(source, is_url=False):
     if is_url:
-        # 구글 드라이브 접속 시도
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(source, headers=headers)
-        if response.status_code != 200:
-            raise Exception(f"구글 드라이브 서버 응답 오류: {response.status_code}")
         df = pd.read_csv(io.StringIO(response.text))
     else:
         df = pd.read_csv(source)
     
-    # 데이터가 비어있는지 확인
-    if df.empty:
-        raise Exception("파일은 로드되었으나 데이터가 비어있습니다.")
-        
-    # JSON 문자열 컬럼 처리 (첫 번째 줄이 비어있을 경우 대비)
+    # JSON 문자열 컬럼 처리
     for col in df.columns:
-        # 데이터가 있고, 첫 번째 값이 문자열이며 '{'로 시작할 때만 동작
-        if not df[col].dropna().empty and isinstance(df[col].dropna().iloc[0], str) and df[col].dropna().iloc[0].startswith('{'):
+        # 데이터 샘플링을 통한 체크
+        sample = df[col].dropna()
+        if not sample.empty and isinstance(sample.iloc[0], str) and sample.iloc[0].startswith('{'):
             expanded = df[col].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
             expanded_df = pd.json_normalize(expanded)
             expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
             df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
     return df
 
-# ... main 함수 생략 (위와 동일)
+def main():
+    st.title("⚾ MLB 분석 엔진 디버깅")
+    
+    all_data = {}
+    
+    # 1. 로딩 단계별 추적
+    try:
+        st.write("로딩 시작...")
+        
+        for key, path in FILE_PATHS.items():
+            st.write(f"{key} 로딩 중...")
+            all_data[key] = load_data(path)
+            
+        st.write("구글 드라이브 데이터 로딩 중...")
+        all_data["full_data"] = load_data(GOOGLE_DRIVE_URL, is_url=True)
+        
+        st.success("모든 데이터 로딩 완료!")
+        st.dataframe(all_data["full_data"].head())
+        
+    except Exception as e:
+        st.error(f"오류 발생: {str(e)}")
+        st.exception(e) # 오류의 원인을 상세히 표시
+
+if __name__ == "__main__":
+    main()
