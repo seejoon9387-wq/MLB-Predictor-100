@@ -13,20 +13,22 @@ class UIManager:
                     background-color: #fcfcf8;
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: center !important; /* 수직 중앙 */
-                    align-items: center !important;     /* 수평 중앙 */
+                    /* 텍스트 줄들을 카드 전체 높이에서 균등하게 배치 */
+                    justify-content: space-around !important; 
+                    align-items: center !important;
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-                    padding: 5px 0 !important;
+                    /* 상하 여백을 추가하여 텍스트가 테두리에 붙지 않게 함 */
+                    padding: 10px 0 !important;
                 }
                 .card-wrapper { padding: 5px; }
                 
-                /* 텍스트 줄을 flex 컨테이너로 설정하여 완벽 중앙 정렬 */
+                /* 각 줄을 flex로 설정하여 텍스트 정렬 */
                 .text-row {
                     display: flex !important;
-                    justify-content: center !important; /* 수평 중앙 */
-                    align-items: center !important;     /* 수직 중앙 */
+                    justify-content: center !important;
+                    align-items: center !important;
                     width: 100% !important;
-                    height: 35px !important;
+                    height: 30px !important; /* 줄 높이 */
                     text-align: center !important;
                 }
                 
@@ -36,8 +38,10 @@ class UIManager:
             </style>
         """, unsafe_allow_html=True)
 
+        # 페이지네이션 상태 관리
         if 'current_page' not in st.session_state: st.session_state.current_page = 0
         
+        # 상단 네비게이션
         col1, col2, col3 = st.columns([1, 10, 1])
         with col1:
             if st.button("◀", key="p"):
@@ -46,9 +50,11 @@ class UIManager:
                     st.rerun()
         with col3:
             if st.button("▶", key="n"):
+                # 전체 데이터 개수에 따른 페이지 제한 처리 가능 (선택 사항)
                 st.session_state.current_page += 1
                 st.rerun()
 
+        # 카드 영역
         card_cols = st.columns(6)
         start = st.session_state.current_page * 6
         page_games = game_data_list[start:start + 6]
@@ -57,7 +63,7 @@ class UIManager:
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 각 줄이 독립적으로 중앙을 향하게 함
+                    # 카드 내 텍스트 밸런스 배치
                     st.markdown(f"""
                         <div class="card-wrapper">
                             <div class="custom-card">
@@ -69,4 +75,5 @@ class UIManager:
                         </div>
                     """, unsafe_allow_html=True)
                 else:
+                    # 데이터가 없는 빈 컬럼은 빈 공간 유지
                     st.write("")
