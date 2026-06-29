@@ -4,6 +4,7 @@ import ast
 import os
 import zipfile
 from modules.time_series import set_time_index
+from modules.text_normalize import normalize_text_data
 
 FILE_NAME = "mlb_full_data_slim.zip"
 
@@ -26,7 +27,8 @@ def load_data():
             expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
             df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
             
-    # 시계열 인덱싱 적용 (game_pk 사용)
+    # 시계열 인덱싱 및 텍스트 정규화 적용
     df = set_time_index(df)
+    df = normalize_text_data(df)
     
     return df
