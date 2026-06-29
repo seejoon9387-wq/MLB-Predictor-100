@@ -13,20 +13,21 @@ class UIManager:
                     background-color: #fcfcf8;
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: center !important; /* 텍스트 전체 그룹을 중앙 정렬 */
-                    align-items: center !important;
+                    justify-content: center !important; /* 수직 중앙 */
+                    align-items: center !important;     /* 수평 중앙 */
                     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
                     padding: 5px 0 !important;
                 }
                 .card-wrapper { padding: 5px; }
                 
-                /* 모든 카드 내 텍스트의 고정 높이와 정렬 */
+                /* 텍스트 줄을 flex 컨테이너로 설정하여 완벽 중앙 정렬 */
                 .text-row {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    width: 100%;
-                    height: 35px; /* 모든 줄의 높이를 35px로 고정 -> 수평 정렬 보장 */
+                    display: flex !important;
+                    justify-content: center !important; /* 수평 중앙 */
+                    align-items: center !important;     /* 수직 중앙 */
+                    width: 100% !important;
+                    height: 35px !important;
+                    text-align: center !important;
                 }
                 
                 .text-date { font-size: 13px !important; color: #697465 !important; font-weight: 500; }
@@ -56,7 +57,7 @@ class UIManager:
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 각 줄을 .text-row로 감싸 높이를 강제 고정하여 수평 정렬 유지
+                    # 각 줄이 독립적으로 중앙을 향하게 함
                     st.markdown(f"""
                         <div class="card-wrapper">
                             <div class="custom-card">
