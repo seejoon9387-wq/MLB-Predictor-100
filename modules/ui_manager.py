@@ -5,7 +5,6 @@ class UIManager:
     def render_game_navbar(game_data_list, on_card_click):
         st.markdown("""
             <style>
-                /* 카드 클릭용 투명 버튼 */
                 div[data-testid="stButton"] button {
                     background: transparent !important;
                     border: none !important;
@@ -24,6 +23,7 @@ class UIManager:
             </style>
         """, unsafe_allow_html=True)
 
+        # 6개의 카드 영역
         card_cols = st.columns(6)
         start = st.session_state.get('current_page', 0) * 6
         page_games = game_data_list[start:start + 6]
