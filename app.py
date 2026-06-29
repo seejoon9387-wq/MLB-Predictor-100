@@ -2,40 +2,35 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import pybaseball
-import re
+import pytz
 from modules.main_trainer import MLBUnifiedTrainer
 
 st.set_page_config(page_title="MLB Live Intelligence", layout="wide")
 
 @st.cache_data(ttl=3600)
 def get_live_schedule():
+    # 올해 연도 설정
     year = datetime.now().year
     df = pybaseball.schedule_and_record(year, 'LAD')
     df = df.reset_index()
     
-    # 1. 날짜 데이터 정제
-    def clean_date(date_str):
-        # 요일과 콤마 제거 ("Thursday, " -> "")
-        date_str = re.sub(r'^[A-Za-z]+, ', '', str(date_str))
-        # 연도가 없는 경우(예: "Mar 26") 올해 연도 붙이기
-        if ',' not in date_str:
-            date_str = f"{date_str}, {year}"
-        return date_str
-
-    df['Date'] = df['Date'].apply(clean_date)
+    # 1. 날짜 데이터 정제 및 한국 시간 적용
+    # format='mixed'는 요일이 있든 없든 연도가 있든 없든 알아서 날짜로 변환합니다.
+    df['Date'] = pd.to_datetime(df['Date'], format='mixed')
     
-    # 2. 날짜 형식 변환
-    df['Date'] = pd.to_datetime(df['Date'], format='%b %d, %Y')
+    # 한국 표준시(KST) 설정 (기본 날짜에 시간 정보를 09:00:00으로 설정)
+    kst = pytz.timezone('Asia/Seoul')
+    df['Date'] = df['Date'].dt.tz_localize(None).dt.tz_localize('UTC').dt.tz_convert(kst)
     
-    # 3. Home/Away 구분 로직
+    # 2. Home/Away 구분 로직
     df['Away'] = df.apply(lambda x: x['Tm'] if x['Home_Away'] == '@' else x['Opp'], axis=1)
     df['Home'] = df.apply(lambda x: x['Opp'] if x['Home_Away'] == '@' else x['Tm'], axis=1)
     
-    # 4. 오늘 이후 경기만 필터링 및 정렬
-    today = pd.Timestamp(datetime.now().date())
-    df = df[df['Date'] >= today].sort_values(by='Date').reset_index(drop=True)
+    # 3. 오늘(KST 기준) 이후 경기만 필터링 및 정렬
+    today = datetime.now(kst).replace(tzinfo=None)
+    df = df[df['Date'].dt.tz_localize(None) >= today].sort_values(by='Date').reset_index(drop=True)
     
-    # 5. 보기 좋은 형식으로 변환
+    # 4. 보기 좋은 형식으로 변환 (KST 기준)
     df['Display_Date'] = df['Date'].dt.strftime('%m-%d (%a)')
     
     return df[['Date', 'Display_Date', 'Away', 'Home']]
@@ -50,9 +45,8 @@ def main():
             st.warning("현재 예정된 경기가 없습니다.")
             return
 
-        st.subheader("📅 오늘의 경기 및 향후 일정")
+        st.subheader("📅 오늘의 경기 및 향후 일정 (KST 기준)")
         
-        # 경기 일정 선택 표
         event = st.dataframe(
             df[['Display_Date', 'Away', 'Home']], 
             use_container_width=True,
@@ -73,7 +67,7 @@ def main():
                 
     except Exception as e:
         st.error(f"데이터 처리 오류: {e}")
-        st.write("문제가 지속되면 데이터의 원본 형식을 확인해야 합니다.")
+        st.write("데이터 형식이 여전히 문제가 있다면 다시 알려주세요.")
 
 if __name__ == "__main__":
     main()
