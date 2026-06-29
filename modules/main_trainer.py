@@ -1,23 +1,22 @@
-import numpy as np
+from modules.data_loader import DataLoader
+from modules.trainer import Trainer
+from modules.optimizer import Optimizer
+from modules.registry import Registry
 
-class MLBUnifiedTrainer:
-    def __init__(self):
-        self.weights = {
-            'era': -0.3, 'ops': 0.4, 'last_10': 0.2, 
-            'whip': -0.15, 'avg': 0.15, 'win_rate': 0.5
-        }
+def main_engine_cycle():
+    # 1. 데이터 로드 (수백만 건 처리 최적화)
+    data = DataLoader.load_historical_data()
+    
+    # 2. 모델 학습 (Trainer 활용)
+    # 수백만 건의 데이터를 배칭(Batching)하여 모델 파라미터 최적화
+    model = Trainer.train(data)
+    
+    # 3. 하이퍼파라미터 튜닝 (Optimizer 활용)
+    optimized_model = Optimizer.tune(model, data)
+    
+    # 4. 결과 레지스트리 저장
+    Registry.save_model(optimized_model)
+    print("시스템 예측 엔진 최적화 완료.")
 
-    def analyze(self, data_dict):
-        h_score, a_score = 0, 0
-        for col, weight in self.weights.items():
-            h_key, a_key = f"h_{col}", f"a_{col}"
-            if h_key in data_dict and a_key in data_dict:
-                h_score += float(data_dict[h_key]) * weight
-                a_score += float(data_dict[a_key]) * weight
-        final_score = 1 / (1 + np.exp(-(h_score - a_score) * 5))
-        return {
-            "winner": "Home" if final_score >= 0.5 else "Away",
-            "confidence": round(abs(final_score - 0.5) * 200, 1),
-            "score": final_score,
-            "stats": data_dict
-        }
+if __name__ == "__main__":
+    main_engine_cycle()
