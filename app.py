@@ -3,20 +3,6 @@ import statsapi
 from modules.data_manager import DataManager
 from modules.ui_manager import UIManager
 
-# app.py의 중간에 이 내용을 추가하거나 수정하세요
-from simulator import Simulator
-
-# 경기 정보가 들어있는 game 변수가 있다고 가정
-home = game['home_name'] 
-away = game['away_name']
-
-# 엔진 가동
-win_prob = Simulator.calculate_win_probability(home, away)
-
-# 화면 출력
-st.write(f"### {away} vs {home}")
-st.metric("홈팀 승리 예상 확률", f"{win_prob}%")
-
 def analyze_win_probability(game):
     """기초적인 승률 예측 엔진 (현재는 안타 합계 기반)"""
     # 실제 모델로 발전시킬 자리
