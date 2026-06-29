@@ -3,58 +3,70 @@ import pandas as pd
 import numpy as np
 import os
 
+# --- 엔진: 승률 예측 알고리즘 ---
 def get_prediction(home_id, away_id):
     try:
-        # 투수 데이터 로드
-        pitchers = pd.read_csv('pitchers.csv.csv')
-        
-        # 'team' 컬럼이 단순 이름이 아니라 ID를 포함할 수 있으므로, 
-        # 데이터 내의 team 컬럼을 숫자로 변환하여 비교합니다.
-        # 주의: pitchers.csv에 'team_id' 같은 컬럼이 있다면 그 이름을 쓰세요.
-        # 여기서는 'team' 컬럼에 ID가 들어있다고 가정합니다.
-        
-        h_data = pitchers[pitchers['team'].astype(str).str.contains(str(home_id), na=False)]
-        a_data = pitchers[pitchers['team'].astype(str).str.contains(str(away_id), na=False)]
-        
-        if h_data.empty or a_data.empty:
-            return 50.0
-        
-        h_era = pd.to_numeric(h_data['era'], errors='coerce').mean()
-        a_era = pd.to_numeric(a_data['era'], errors='coerce').mean()
-        
-        if np.isnan(h_era) or np.isnan(a_era):
+        # 데이터가 있는 폴더에서 파일 로드
+        if not os.path.exists('pitchers.csv.csv') or not os.path.exists('batters.csv.csv'):
             return 50.0
             
-        # 승률 계산: ERA가 낮을수록 유리 (승률 보정 로직)
-        prob = 1 / (1 + np.exp(-( (1/(h_era+0.1)) - (1/(a_era+0.1)) )))
+        pitchers = pd.read_csv('pitchers.csv.csv')
+        batters = pd.read_csv('batters.csv.csv')
+        
+        # 데이터 클렌징 (팀 정보 매칭)
+        def get_offense(t_id):
+            b_data = batters[batters['team'].astype(str).str.contains(str(t_id), na=False)]
+            # OPS가 높을수록 공격력 강함
+            return b_data['ops'].mean() if not b_data.empty else 0.730 
+        
+        def get_defense(t_id):
+            p_data = pitchers[pitchers['team'].astype(str).str.contains(str(t_id), na=False)]
+            # ERA가 낮을수록 투수력이 강함
+            era_val = p_data['era'].mean() if not p_data.empty else 4.0
+            return 1 / (era_val + 0.5)
+            
+        # 3중 가중치 계산: 공격(60%) + 수비(40%) + 홈어드밴티지(5%)
+        home_score = (get_offense(home_id) * 0.6) + (get_defense(home_id) * 0.4) + 0.05
+        away_score = (get_offense(away_id) * 0.6) + (get_defense(away_id) * 0.4)
+        
+        # 로지스틱 함수로 승률 변환 (10배 증폭하여 확률 차이를 명확히 함)
+        prob = 1 / (1 + np.exp(-(home_score - away_score) * 10))
         return round(prob * 100, 1)
     except:
         return 50.0
 
+# --- UI: 화면 출력부 ---
 def main():
+    st.set_page_config(page_title="MLB 예측 엔진", layout="wide")
     st.title("⚾ MLB 슈퍼컴퓨터 분석 엔진")
-    
+    st.write("---")
+
     if os.path.exists('schedule.csv.csv'):
         games_df = pd.read_csv('schedule.csv.csv')
         
-        # 데이터프레임의 홈/원정팀 정보가 딕셔너리 형태인지 확인 후 처리
         for idx, row in games_df.iterrows():
-            # ID 추출 (만약 딕셔너리라면 id값만 뽑아냄)
-            h_id = row['home_team'] if not isinstance(row['home_team'], dict) else row['home_team'].get('id', 0)
-            a_id = row['away_team'] if not isinstance(row['away_team'], dict) else row['away_team'].get('id', 0)
+            # 데이터에서 ID와 이름 추출
+            h_val = row['home_team']
+            a_val = row['away_team']
             
-            # 팀 이름 표시를 위한 정리
-            h_name = row['home_team']['name'] if isinstance(row['home_team'], dict) else row['home_team']
-            a_name = row['away_team']['name'] if isinstance(row['away_team'], dict) else row['away_team']
+            # ID/이름 구분 처리
+            h_id = h_val.get('id', 0) if isinstance(h_val, dict) else h_val
+            a_id = a_val.get('id', 0) if isinstance(a_val, dict) else a_val
+            h_name = h_val.get('name', 'Home') if isinstance(h_val, dict) else h_val
+            a_name = a_val.get('name', 'Away') if isinstance(a_val, dict) else a_val
             
+            # 예측 실행
             win_prob = get_prediction(h_id, a_id)
             
+            # 화면 표시
             col1, col2 = st.columns([3, 1])
             with col1:
-                st.write(f"**{a_name} vs {h_name}**")
+                st.write(f"### {a_name} vs {h_name}")
             with col2:
-                st.metric("홈 승률", f"{win_prob}%")
+                st.metric("홈팀 승리 확률", f"{win_prob}%")
             st.divider()
+    else:
+        st.error("데이터 파일(schedule.csv.csv 등)을 찾을 수 없습니다. 경로를 확인해주세요.")
 
 if __name__ == "__main__":
     main()
