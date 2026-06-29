@@ -5,14 +5,12 @@ class UIManager:
     def render_game_navbar(game_data_list, on_card_click):
         st.markdown("""
             <style>
-                /* 투명 버튼 처리: 카드 전체를 클릭 가능하게 함 */
                 div[data-testid="stButton"] button {
                     background: transparent !important;
                     border: none !important;
-                    padding: 0 !important;
+                    position: absolute !important;
                     width: 100% !important;
                     height: 180px !important;
-                    position: absolute !important;
                     z-index: 10 !important;
                 }
                 .custom-card { width: 100% !important; height: 180px !important; border: 2px solid #d9ded5 !important; border-radius: 12px !important; background-color: #fcfcf8; display: flex !important; flex-direction: column !important; justify-content: space-around !important; align-items: center !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; padding: 10px 0 !important; }
@@ -24,18 +22,24 @@ class UIManager:
             </style>
         """, unsafe_allow_html=True)
 
-        # ... (상단 버튼 및 페이지네이션 로직은 동일) ...
+        if 'current_page' not in st.session_state: st.session_state.current_page = 0
         
+        # 데이터가 없을 경우를 대비한 방어 코드
+        if not game_data_list:
+            st.warning("데이터가 없습니다.")
+            return
+
         card_cols = st.columns(6)
-        # ... (생략) ...
+        start = st.session_state.current_page * 6
+        page_games = game_data_list[start:start + 6]
         
         for i, col in enumerate(card_cols):
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 카드Wrapper 안에 투명 버튼 삽입
                     st.markdown('<div class="card-wrapper">', unsafe_allow_html=True)
-                    if st.button(" ", key=f"click_{i}"):
+                    # 투명 버튼: 클릭 시 상세 정보 갱신
+                    if st.button(" ", key=f"btn_{i}"):
                         on_card_click(game)
                     st.markdown(f"""
                         <div class="custom-card">
