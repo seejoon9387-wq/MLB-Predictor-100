@@ -3,60 +3,51 @@ import streamlit as st
 class UIManager:
     @staticmethod
     def render_game_navbar(game_data_list):
-        # 전체를 상단 중앙으로 배치하기 위한 컨테이너 설정
+        # 1. 상단 정렬 및 버튼 고정 (고정된 너비 사용)
         st.markdown("""
             <style>
-                /* 전체 페이지 상단 여백 제거 */
-                .block-container { padding-top: 1rem; }
-                /* 카드를 가로로 넓게 설정 */
-                .card-wide {
-                    width: 95%; 
-                    height: 180px;
-                    border: 1px solid #d1d5db;
-                    border-radius: 12px;
-                    padding: 20px;
-                    text-align: center;
-                    background: white;
-                    margin: 0 auto;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                .nav-container { display: flex; justify-content: center; align-items: center; gap: 40px; margin-bottom: 20px; }
+                .game-card { 
+                    border: 1px solid #d1d5db; border-radius: 12px; padding: 15px; 
+                    text-align: center; background: #ffffff; height: 170px; 
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
             </style>
         """, unsafe_allow_html=True)
 
+        # 페이지네이션
         items_per_page = 6
         start = st.session_state.get('current_page', 0) * items_per_page
         page_games = game_data_list[start:start + items_per_page]
 
-        # 1. 상단 화살표 (가운데 정렬)
-        c1, c2, c3 = st.columns([1, 8, 1])
-        with c1:
-            if st.button("◀ 이전"):
+        # 버튼 영역 (고정)
+        col1, col2, col3 = st.columns([1, 8, 1])
+        with col1:
+            if st.button("◀"):
                 if st.session_state.get('current_page', 0) > 0:
                     st.session_state.current_page -= 1
                     st.rerun()
-        with c3:
-            if st.button("다음 ▶"):
+        with col3:
+            if st.button("▶"):
                 st.session_state.current_page = st.session_state.get('current_page', 0) + 1
                 st.rerun()
 
-        # 2. 카드 배치 (6개 칼럼을 가로로 길게 확장)
+        # 2. 카드 배치 (6개 컬럼 고정)
         cols = st.columns(6) 
         for i in range(6):
             with cols[i]:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 카드 내부 텍스트 및 디자인
+                    # 고정된 카드 디자인 클래스 적용
                     st.markdown(f"""
-                        <div class="card-wide">
+                        <div class="game-card">
                             <div style="font-size: 11px; color: #6b7280; font-weight: bold;">{game.get('display_date', '')}</div>
-                            <div style="font-size: 18px; font-weight: 800; color: #dc2626; margin: 10px 0;">{game.get('display_time', '')}</div>
-                            <div style="font-size: 14px; font-weight: 700; margin-bottom: 5px;">{game.get('away_name', 'AWAY')}</div>
-                            <div style="font-size: 14px; font-weight: 700;">{game.get('home_name', 'HOME')}</div>
+                            <div style="font-size: 16px; font-weight: 800; color: #dc2626; margin: 8px 0;">{game.get('display_time', '')}</div>
+                            <div style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">{game.get('away_name', 'AWAY')}</div>
+                            <div style="font-size: 12px; font-weight: 700;">{game.get('home_name', 'HOME')}</div>
                         </div>
                     """, unsafe_allow_html=True)
                     
                     if st.button("상세보기", key=f"btn_{game.get('game_id', i)}"):
                         st.session_state.selected_game_id = game.get('game_id')
                         st.rerun()
-                else:
-                    st.write("")
