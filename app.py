@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import ast
 from modules import summary, search
 
 # 구글 드라이브 파일 ID
@@ -12,13 +13,20 @@ FILE_IDS = {
 
 @st.cache_data
 def load_all_data():
-    """데이터를 로드하는 엔진 핵심 함수"""
     data = {}
     errors = []
     for key, file_id in FILE_IDS.items():
         try:
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            data[key] = pd.read_csv(url)
+            df = pd.read_csv(url)
+            
+            # [수정] 딕셔너리 형태의 텍스트가 들어있을 경우 강제로 펼침
+            if len(df.columns) == 1:
+                # 텍스트 형태의 딕셔너리를 실제 데이터프레임으로 변환
+                df = df.iloc[:, 0].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('{') else x)
+                df = pd.json_normalize(df)
+            
+            data[key] = df
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
     return data, errors
@@ -27,8 +35,7 @@ def main():
     st.set_page_config(page_title="MLB 분석 엔진", layout="wide")
     st.title("⚾ MLB 분석 엔진")
     
-    # 여기서 load_all_data 함수를 호출합니다.
-    data, errors = load_all_data() 
+    data, errors = load_all_data()
     
     if errors:
         for err in errors:
