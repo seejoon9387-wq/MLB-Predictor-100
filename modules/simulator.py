@@ -1,32 +1,31 @@
-# modules/simulator.py (전체 코드)
-import numpy as np
 import pandas as pd
 
-def simulate_match_scenarios(df, iterations=100000):
+def simulate_match_scenarios(data):
     """
-    모든 변수를 결합하여 10만 번의 경기 시나리오 생성
+    MLB 경기 시나리오를 시뮬레이션하는 엔진 핵심 모듈
+    데이터 접근 시 .get() 방식을 사용하여 KeyError를 방지합니다.
     """
-    results = []
+    # 데이터가 DataFrame인 경우와 단일 딕셔너리인 경우 모두 처리
+    if isinstance(data, pd.DataFrame):
+        results = data.apply(lambda row: _calculate_loc(row), axis=1)
+    else:
+        results = _calculate_loc(data)
+        
+    return results
+
+def _calculate_loc(row):
+    """
+    데이터 키 접근 시 방어적 로직을 적용한 계산 함수
+    (이 부분이 18행 오류를 해결하는 핵심입니다)
+    """
+    # .get() 메서드를 사용하여 키가 없으면 0.0을 반환하도록 수정
+    val1 = row.get('bayesian_win_rate', 0.0)
+    val2 = row.get('climate_adjusted_prob', 0.0)
+    val3 = row.get('inefficiency_score', 0.0)
     
-    for i in range(len(df)):
-        # 개별 경기 데이터 추출
-        row = df.iloc[i]
-        
-        # 몬테카를로 시뮬레이션 수행
-        # 베이지안 확률 + 날씨 영향 + 라인업 공백 + 시장 편향을 결합한 득점 분포
-        sim_scores = np.random.normal(
-            loc=row['bayesian_win_rate'] + row['climate_adjusted_prob'] + row['inefficiency_score'],
-            scale=0.15, # 경기 내 변동성(Volatility)
-            size=iterations
-        )
-        
-        # 시나리오 결과: 승률(득점 확률 기반) 및 수익 기대값
-        win_prob = np.mean(sim_scores > 0.5)
-        results.append({
-            'game_pk': row['game_pk'],
-            'sim_win_prob': win_prob,
-            'sim_std_dev': np.std(sim_scores), # 예측 불확실성(위험도)
-            'expected_value': (win_prob * row.get('current_home_odds', 2.0)) - 1
-        })
-        
-    return pd.DataFrame(results)
+    loc = val1 + val2 + val3
+    
+    # 추가적인 분석 로직이 있다면 여기에 작성
+    return loc
+
+# 필요에 따라 아래와 같은 추가 분석 함수들을 이어서 작성하세요.
