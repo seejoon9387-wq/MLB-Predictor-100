@@ -29,23 +29,30 @@ def main():
             st.divider()
             st.subheader(f"🔍 {selected_game['Away']} vs {selected_game['Home']} 정밀 분석")
             
-            if st.button("🚀 엔진 가동"):
-                with st.spinner('AI 분석 중...'):
+            if st.button("🚀 데이터 기반 엔진 가동"):
+                with st.spinner('통계 데이터를 분석 중...'):
                     result = MLBUnifiedTrainer().analyze({'game_pk': selected_game['game_pk']})
                     
+                    # 1. 지표 출력
                     col1, col2 = st.columns(2)
                     col1.metric("예측 승자", result['winner'])
                     col2.metric("확신도", f"{result['confidence']}%")
                     
-                    st.markdown("### 📈 승리 확률 분석")
-                    # 승률 바 시각화 (Home 기준)
-                    prog = result['score'] if result['winner'] == 'Home' else 1 - result['score']
-                    st.progress(prog)
+                    # 2. 통계 근거 테이블
+                    st.markdown("### 📋 주요 팀 지표 비교")
+                    stats = result['stats']
+                    st.table(pd.DataFrame({
+                        "구분": ["시즌 승률", "선발 방어율(ERA)"],
+                        "Home": [f"{int(stats['h_rate']*100)}%", stats['home_era']],
+                        "Away": [f"{int(stats['a_rate']*100)}%", stats['away_era']]
+                    }))
                     
+                    # 3. 상세 리포트
                     st.markdown("---")
                     st.markdown(result['detailed_report'])
+                    st.progress(result['score'])
     else:
-        st.warning("일정 데이터를 불러올 수 없습니다.")
+        st.warning("경기 일정을 불러올 수 없습니다.")
 
 if __name__ == "__main__":
     main()
