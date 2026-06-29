@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import ast
 from modules import summary, search
 
 # 구글 드라이브 파일 ID
@@ -17,15 +16,9 @@ def load_all_data():
     errors = []
     for key, file_id in FILE_IDS.items():
         try:
+            # CSV 대신 JSON 형식으로 읽기 시도
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
-            df = pd.read_csv(url)
-            
-            # [수정] 딕셔너리 형태의 텍스트가 들어있을 경우 강제로 펼침
-            if len(df.columns) == 1:
-                # 텍스트 형태의 딕셔너리를 실제 데이터프레임으로 변환
-                df = df.iloc[:, 0].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('{') else x)
-                df = pd.json_normalize(df)
-            
+            df = pd.read_json(url)
             data[key] = df
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
