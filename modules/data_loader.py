@@ -24,30 +24,38 @@ def load_data(analysis_mode="연속적"):
         with z.open(file_list[0]) as f:
             df = pd.read_csv(f)
     
-    # 1. 필수 컬럼 확인 (디버깅용)
-    required_col = 'game_pk'
-    if required_col not in df.columns:
-        # 혹시 이름이 다른 경우(예: game_id) 자동으로 이름 변경 시도
-        possible_names = ['game_id', 'game_identifier', 'gameId']
-        for name in possible_names:
-            if name in df.columns:
-                df = df.rename(columns={name: 'game_pk'})
+    # 1. 컬럼명 정제 및 자동 매핑
+    # 데이터셋마다 'game_pk' 명칭이 다를 수 있으므로 자동 변환
+    target_map = {
+        'game_pk': ['game_pk', 'game_id', 'game', 'game_identifier', 'gameId', 'game_ID'],
+        'pitcher': ['pitcher', 'pitcher_id', 'pitcherId'],
+        'batter': ['batter', 'batter_id', 'batterId']
+    }
+    
+    for real_name, variants in target_map.items():
+        for variant in variants:
+            if variant in df.columns:
+                df = df.rename(columns={variant: real_name})
                 break
-        
-        if 'game_pk' not in df.columns:
-            st.error(f"오류: 데이터에 필수 컬럼 '{required_col}'이 없습니다. 현재 컬럼: {list(df.columns)}")
-            return pd.DataFrame()
+    
+    # 만약 'game_pk'가 여전히 없다면 디버깅을 위해 보여줌
+    if 'game_pk' not in df.columns:
+        st.error(f"데이터에 'game_pk' 컬럼이 없습니다. 실제 컬럼: {list(df.columns)}")
+        return pd.DataFrame()
 
     # 2. JSON 정제
     for col in df.columns:
         sample = df[col].dropna()
         if not sample.empty and isinstance(sample.iloc[0], str) and sample.iloc[0].startswith('{'):
-            expanded = df[col].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else {})
-            expanded_df = pd.json_normalize(expanded)
-            expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
-            df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
+            try:
+                expanded = df[col].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else {})
+                expanded_df = pd.json_normalize(expanded)
+                expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
+                df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
+            except:
+                continue
             
-    # 3. 파이프라인
+    # 3. 파이프라인 적용
     df = set_time_index(df)
     df = normalize_text_data(df)
     df = handle_missing_values(df)
@@ -55,7 +63,7 @@ def load_data(analysis_mode="연속적"):
     df = optimize_data_types(df)
     df = add_matchup_stats(df)
     
-    # 4. 레지스트리 및 피처 엔지니어링
+    # 4. 레지스트리 생성
     if analysis_mode == "독립적":
         registry = pd.concat([create_main_registry(group) for _, group in df.groupby('game_year')])
     else:
