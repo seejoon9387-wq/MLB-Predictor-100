@@ -5,8 +5,9 @@ import os
 import zipfile
 from modules.registry import create_main_registry
 from modules.features import add_rolling_features
+from modules.weather_processor import process_weather_features
 
-# 구장 특성 팩터 예시 (실제 데이터에 맞춰 조정 가능)
+# 구장 특성 팩터 (Park Factors)
 PARK_FACTORS = {'Fenway Park': 1.05, 'Dodger Stadium': 0.95, 'Yankee Stadium': 1.02}
 
 @st.cache_data
@@ -20,10 +21,10 @@ def load_data(analysis_mode="연속적"):
         with z.open(z.namelist()[0]) as f:
             df = pd.read_csv(f)
     
-    # 1. 컬럼 소문자화 및 필수 ID 확보
+    # 1. 컬럼명 소문자 통일 및 필수 ID 확보
     df.columns = [c.lower().strip() for c in df.columns]
     
-    # 2. JSON 정제
+    # 2. JSON 컬럼 분해 및 정제
     for col in df.columns:
         if df[col].dtype == 'object' and df[col].astype(str).str.startswith('{').any():
             try:
@@ -33,9 +34,13 @@ def load_data(analysis_mode="연속적"):
                 df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
             except: continue
     
-    # 3. 구장 특성 보정 적용 (Park Factor)
+    # 3. 외부 환경 변수 보정 (구장 & 기상)
+    # 구장 특성 보정
     if 'home_team' in df.columns:
         df['pf_adjusted_home_score'] = df['home_score'] / df['home_team'].map(PARK_FACTORS).fillna(1.0)
+    
+    # 기상 상황 수치화
+    df = process_weather_features(df)
     
     # 4. 레지스트리 생성
     if analysis_mode == "독립적":
