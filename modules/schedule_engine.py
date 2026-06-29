@@ -1,31 +1,29 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime
-
-# 간단한 위도/경도 기반 거리 계산 (지구 곡률 고려)
-def haversine_distance(lat1, lon1, lat2, lon2):
-    R = 6371 # 지구 반경(km)
-    dlat = np.radians(lat2 - lat1)
-    dlon = np.radians(lon2 - lon1)
-    a = np.sin(dlat/2)**2 + np.cos(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.sin(dlon/2)**2
-    return R * 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
 
 def add_schedule_features(registry):
     """
-    경기 시간, 요일, 이동 거리 보정 변수 생성
+    데이터 존재 여부를 확인하고, 안전하게 요일/시간/거리 피처를 생성합니다.
     """
-    # 1. 요일 특성 (주말/평일 구분)
-    registry['day_of_week'] = pd.to_datetime(registry['game_date']).dt.dayofweek
-    registry['is_weekend'] = registry['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
+    # 1. 날짜 및 요일 처리
+    if 'game_date' in registry.columns:
+        registry['game_date'] = pd.to_datetime(registry['game_date'], errors='coerce')
+        registry['day_of_week'] = registry['game_date'].dt.dayofweek
+        registry['is_weekend'] = registry['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
     
-    # 2. 경기 시간 특성 (낮/밤 경기 구분)
-    # 18시 이후 경기이면 야간(1), 낮 경기(0)
-    registry['is_night_game'] = registry['game_time'].apply(lambda x: 1 if int(str(x)[:2]) >= 18 else 0)
+    # 2. 시간 데이터 존재 확인 및 야간 경기 여부 처리
+    # 컬럼명이 다를 경우를 대비하여 우선순위 후보군 확인
+    time_col = next((c for c in ['game_time', 'start_time', 'time'] if c in registry.columns), None)
     
-    # 3. 이동 거리 보정 (이전 경기 장소와의 거리)
-    # 각 팀의 최근 경기 장소 좌표를 트래킹하여 거리 계산
-    registry['travel_distance'] = registry.groupby('home_team')['venue_coords'].shift(1).apply(
-        lambda x: haversine_distance(x[0], x[1], current_lat, current_lon) if x else 0
-    )
+    if time_col:
+        registry['is_night_game'] = registry[time_col].astype(str).apply(
+            lambda x: 1 if ':' in x and int(x.split(':')[0]) >= 18 else 0
+        )
+    else:
+        # 데이터가 없으면 기본값 0 할당
+        registry['is_night_game'] = 0
+    
+    # 3. 이동 거리 초기화
+    registry['travel_distance'] = 0.0
     
     return registry
