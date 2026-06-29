@@ -17,33 +17,32 @@ FILE_NAME = "mlb_full_data_slim.zip"
 @st.cache_data
 def load_data(analysis_mode="연속적"):
     if not os.path.exists(FILE_NAME):
-        raise FileNotFoundError(f"{FILE_NAME} 파일을 찾을 수 없습니다.")
+        st.error(f"{FILE_NAME} 파일을 찾을 수 없습니다.")
+        return None
     
     with zipfile.ZipFile(FILE_NAME, 'r') as z:
         file_list = z.namelist()
         with z.open(file_list[0]) as f:
             df = pd.read_csv(f)
     
-    # 1. 컬럼명 정제 및 자동 매핑
-    # 데이터셋마다 'game_pk' 명칭이 다를 수 있으므로 자동 변환
-    target_map = {
-        'game_pk': ['game_pk', 'game_id', 'game', 'game_identifier', 'gameId', 'game_ID'],
-        'pitcher': ['pitcher', 'pitcher_id', 'pitcherId'],
-        'batter': ['batter', 'batter_id', 'batterId']
-    }
+    # [디버깅] 현재 컬럼 출력 (화면에서 확인용)
+    st.write("### [디버깅] 로드된 데이터 컬럼:", list(df.columns))
     
-    for real_name, variants in target_map.items():
-        for variant in variants:
-            if variant in df.columns:
-                df = df.rename(columns={variant: real_name})
-                break
+    # 1. 'game_pk' 찾기 및 매핑 (데이터셋의 컬럼명이 바뀌었을 경우 대비)
+    found_pk = None
+    possible_pk_names = ['game_pk', 'game_id', 'game', 'gameId', 'game_identifier']
+    for name in possible_pk_names:
+        if name in df.columns:
+            found_pk = name
+            break
     
-    # 만약 'game_pk'가 여전히 없다면 디버깅을 위해 보여줌
-    if 'game_pk' not in df.columns:
-        st.error(f"데이터에 'game_pk' 컬럼이 없습니다. 실제 컬럼: {list(df.columns)}")
-        return pd.DataFrame()
+    if found_pk:
+        df = df.rename(columns={found_pk: 'game_pk'})
+    else:
+        st.error(f"오류: 데이터에서 경기 식별자(game_pk 등)를 찾을 수 없습니다. 현재 컬럼: {list(df.columns)}")
+        return None
 
-    # 2. JSON 정제
+    # 2. JSON 컬럼 정제
     for col in df.columns:
         sample = df[col].dropna()
         if not sample.empty and isinstance(sample.iloc[0], str) and sample.iloc[0].startswith('{'):
@@ -63,12 +62,16 @@ def load_data(analysis_mode="연속적"):
     df = optimize_data_types(df)
     df = add_matchup_stats(df)
     
-    # 4. 레지스트리 생성
-    if analysis_mode == "독립적":
-        registry = pd.concat([create_main_registry(group) for _, group in df.groupby('game_year')])
-    else:
-        registry = create_main_registry(df)
-    
-    registry = add_rolling_features(registry)
+    # 4. 레지스트리 및 피처 엔지니어링
+    try:
+        if analysis_mode == "독립적":
+            registry = pd.concat([create_main_registry(group) for _, group in df.groupby('game_year')])
+        else:
+            registry = create_main_registry(df)
+        
+        registry = add_rolling_features(registry)
+    except Exception as e:
+        st.error(f"레지스트리 생성 중 오류 발생: {e}")
+        return None
     
     return registry
