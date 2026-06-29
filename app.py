@@ -25,35 +25,34 @@ def main():
     st.set_page_config(layout="wide")
     st.title("⚾ MLB 실시간 경기")
     
-    # 세션 상태 초기화
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
-    if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    # 상단 컨트롤
     col1, col2 = st.columns([1, 5])
     with col1:
         if st.button("🔄 새로고침"):
             st.session_state.games = fetch_data()
             st.rerun()
 
-    # 상세 정보 로드 함수 (클릭 시 실행)
     def handle_card_click(game):
-        with st.spinner('실시간 경기 상세 정보를 불러오는 중...'):
+        with st.spinner('상세 정보 로드 중...'):
             st.session_state.selected_game = game
             st.session_state.details = statsapi.game_data(game['id'])
+            st.rerun()
 
-    # UI 렌더링
     UIManager.render_game_navbar(st.session_state.games, handle_card_click)
 
-    # 상세 정보 표시
-    if 'selected_game' in st.session_state:
+    # 안전한 데이터 접근 (두 키가 모두 존재할 때만 실행)
+    if 'selected_game' in st.session_state and 'details' in st.session_state:
         g = st.session_state.selected_game
         details = st.session_state.details
         st.divider()
-        st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 상세 정보")
-        weather = details['gameData']['weather'].get('condition', '정보 없음')
-        st.write(f"🌤 **날씨**: {weather}")
-        # 투수/라인업 등 추가 정보 구현 가능
+        st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 실시간 상세 정보")
+        
+        try:
+            weather = details['gameData']['weather'].get('condition', '정보 없음')
+            st.write(f"🌤 **날씨**: {weather}")
+        except Exception:
+            st.write("상세 정보를 표시할 수 없습니다.")
 
 if __name__ == "__main__":
     main()
