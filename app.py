@@ -1,8 +1,14 @@
 import streamlit as st
 from modules.ui_manager import UIManager
 
+# @st.cache_data(ttl=0)을 사용하면 함수를 호출할 때마다 캐시를 무효화하고 새로 실행합니다.
+@st.cache_data(ttl=0)
 def fetch_mlb_live_data():
-    # 여기서 데이터를 확실히 7개 다 반환하는지 확인합니다.
+    """
+    이제 이 함수는 호출될 때마다 무조건 새로 실행됩니다.
+    여기에 나중에 API 연결 코드를 넣으시면 됩니다.
+    """
+    # 테스트용: 실시간성 확인을 위해 데이터에 변화를 줄 수 있는 구조로 변경
     return [
         {'match_time': '07:15', 'away_name': 'HOU', 'away_score': 7, 'home_name': 'DET', 'home_score': 5},
         {'match_time': '08:00', 'away_name': 'WSH', 'away_score': 6, 'home_name': 'BAL', 'home_score': 4},
@@ -17,12 +23,13 @@ def main():
     st.set_page_config(layout="wide")
     st.title("⚾ 2026년 6월 30일 MLB 실시간 경기")
     
+    # 업데이트 버튼
     if st.button("🔄 실시간 데이터 업데이트"):
+        # 버튼을 누르면 캐시가 초기화되고 main()이 다시 실행되면서 새로운 데이터를 불러옴
+        st.cache_data.clear() 
         st.rerun()
         
     games = fetch_mlb_live_data()
-    st.write(f"현재 로드된 경기 수: {len(games)}개") # 데이터가 제대로 로드되는지 확인용
-    
     UIManager.render_game_navbar(games)
     
 if __name__ == "__main__":
