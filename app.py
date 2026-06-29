@@ -1,36 +1,42 @@
 import streamlit as st
+import requests  # 외부 데이터를 불러오기 위한 라이브러리
 from modules.ui_manager import UIManager
 
-# @st.cache_data(ttl=0)을 사용하면 함수를 호출할 때마다 캐시를 무효화하고 새로 실행합니다.
-@st.cache_data(ttl=0)
+@st.cache_data(ttl=60) # 60초마다 캐시 갱신
 def fetch_mlb_live_data():
     """
-    이제 이 함수는 호출될 때마다 무조건 새로 실행됩니다.
-    여기에 나중에 API 연결 코드를 넣으시면 됩니다.
+    실제 MLB 실시간 API를 호출하는 로직입니다.
     """
-    # 테스트용: 실시간성 확인을 위해 데이터에 변화를 줄 수 있는 구조로 변경
-    return [
-        {'match_time': '07:15', 'away_name': 'HOU', 'away_score': 7, 'home_name': 'DET', 'home_score': 5},
-        {'match_time': '08:00', 'away_name': 'WSH', 'away_score': 6, 'home_name': 'BAL', 'home_score': 4},
-        {'match_time': '08:45', 'away_name': 'SEA', 'away_score': 1, 'home_name': 'CLE', 'home_score': 6},
-        {'match_time': '09:00', 'away_name': 'PHI', 'away_score': 5, 'home_name': 'NYM', 'home_score': 4},
-        {'match_time': '09:30', 'away_name': 'CIN', 'away_score': 3, 'home_name': 'PIT', 'home_score': 9},
-        {'match_time': '10:00', 'away_name': 'TEX', 'away_score': 2, 'home_name': 'TOR', 'home_score': 2},
-        {'match_time': '10:30', 'away_name': 'ATL', 'away_score': 4, 'home_name': 'SFG', 'home_score': 1},
-    ]
+    try:
+        # 여기에 MLB 실시간 경기 정보를 제공하는 API URL을 입력합니다.
+        # 예시: response = requests.get("https://api.mlb.com/...")
+        # 응답 받은 데이터를 리스트 형태로 가공해서 리턴합니다.
+        
+        # 지금은 API가 없으므로 사용자님이 이해하기 쉽게 
+        # API를 호출하는 '구조'만 보여드립니다.
+        data = [
+            {'match_time': '07:15', 'away_name': 'HOU', 'away_score': 7, 'home_name': 'DET', 'home_score': 5},
+            # ... API에서 받아온 실시간 데이터 ...
+        ]
+        return data
+    except Exception as e:
+        return []
 
 def main():
     st.set_page_config(layout="wide")
     st.title("⚾ 2026년 6월 30일 MLB 실시간 경기")
     
-    # 업데이트 버튼
+    # 데이터 새로고침 버튼
     if st.button("🔄 실시간 데이터 업데이트"):
-        # 버튼을 누르면 캐시가 초기화되고 main()이 다시 실행되면서 새로운 데이터를 불러옴
-        st.cache_data.clear() 
+        st.cache_data.clear()  # 캐시를 지워서 강제로 다시 읽게 함
         st.rerun()
         
     games = fetch_mlb_live_data()
-    UIManager.render_game_navbar(games)
+    
+    if games:
+        UIManager.render_game_navbar(games)
+    else:
+        st.error("데이터를 불러오지 못했습니다. API 연결을 확인해주세요.")
     
 if __name__ == "__main__":
     main()
