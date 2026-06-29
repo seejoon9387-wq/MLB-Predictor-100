@@ -1,24 +1,21 @@
 # main_trainer.py (전체 코드)
 from modules.data_loader import load_data
 from modules.simulator import simulate_match_scenarios
+from modules.briefing_engine import generate_match_briefing
 
 class MLBUnifiedTrainer:
     def __init__(self):
         self.data = load_data(analysis_mode=True)
+        # 모든 알고리즘을 결합한 데이터셋 구축
+        self.simulated_data = simulate_match_scenarios(self.data)
+        self.data = self.data.merge(self.simulated_data, on='game_pk')
 
-    def run_all_simulations(self):
-        print("상세 시나리오 분석 시작: 모든 변수 결합 10만 회 시뮬레이션...")
-        
-        # 몬테카를로 분석 실행
-        simulation_df = simulate_match_scenarios(self.data)
-        
-        # 신뢰도 필터링: 시뮬레이션의 표준편차(위험도)가 낮은 확실한 경기 우선
-        final_report = simulation_df.sort_values(by='expected_value', ascending=False)
-        
-        return final_report
+    def get_briefing(self, game_pk):
+        if game_pk not in self.data['game_pk'].values:
+            return "해당 경기 ID를 찾을 수 없습니다."
+        return generate_match_briefing(game_pk, self.data)
 
 if __name__ == "__main__":
     trainer = MLBUnifiedTrainer()
-    report = trainer.run_all_simulations()
-    print("--- 최종 시뮬레이션 결과 ---")
-    print(report.head(10))
+    target_pk = 718000 # 분석하고 싶은 경기 ID 입력
+    print(trainer.get_briefing(target_pk))
