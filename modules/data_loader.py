@@ -4,7 +4,6 @@ import ast
 import os
 import zipfile
 
-# 내부 모듈 로드
 from modules.registry import create_main_registry
 from modules.features import add_rolling_features
 from modules.weather_processor import process_weather_features
@@ -26,24 +25,26 @@ def load_data(analysis_mode="연속적"):
         with z.open(z.namelist()[0]) as f:
             df = pd.read_csv(f)
     
-    # 1. 데이터 정제
+    # 1. 컬럼명 정제
     df.columns = [c.lower().strip() for c in df.columns]
     
-    # 2. 보정 엔진 일괄 적용
+    # 2. 타깃 변수 사전 정의 (오류 방지)
+    if 'home_score' in df.columns and 'away_score' in df.columns:
+        df['is_home_win'] = (df['home_score'] > df['away_score']).astype(int)
+    
+    # 3. 데이터 로딩 및 피처 엔진 적용
     df = process_weather_features(df)
     df = calculate_bullpen_fatigue(df)
     df = apply_platoon_weights(df)
     
-    # 3. 레지스트리 및 경기 지표 병합
+    # 4. 레지스트리 생성
     registry = create_main_registry(df)
+    
+    # 5. 모든 지표 통합 병합
     game_metrics = calculate_game_metrics(df)
     registry = registry.merge(game_metrics, on='game_pk', how='left').fillna(0)
-    
-    # 4. 외부 환경 및 천적 관계 매핑
     registry = add_schedule_features(registry)
     registry = add_rivalry_features(registry, df)
-    
-    # 5. 최종 통계 지표 처리
     registry = add_z_score_features(registry)
     registry = add_rolling_features(registry)
     
