@@ -2,9 +2,11 @@ import streamlit as st
 from modules.ui_manager import UIManager
 
 def main():
-    st.set_page_config(layout="wide")
+    st.set_page_config(layout="wide", page_title="MLB AI 경기 센터")
     
-    # 경기 데이터: match_time 필드 추가
+    st.title("⚾ MLB 실시간 경기 센터")
+    st.markdown("---") # 구분선을 넣어 가독성 분리
+    
     all_games = [
         {'match_time': '06-30 08:00', 'away_name': 'WSH', 'away_score': 6, 'home_name': 'BAL', 'home_score': 4},
         {'match_time': '06-30 09:30', 'away_name': 'CIN', 'away_score': 3, 'home_name': 'PIT', 'home_score': 9},
@@ -14,11 +16,10 @@ def main():
         {'match_time': '07-01 09:00', 'away_name': 'PHI', 'away_score': 5, 'home_name': 'NYM', 'home_score': 4},
     ]
     
-    st.title("⚾ MLB 실시간 경기 센터")
-    
     UIManager.render_game_navbar(all_games)
     
-    st.divider()
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.subheader("📊 상세 분석 영역")
     st.write("분석 엔진 결과가 이 아래에 정렬됩니다.")
 
 if __name__ == "__main__":
