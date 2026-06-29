@@ -14,14 +14,15 @@ class UIManager:
         start = st.session_state.get('current_page', 0) * 6
         page_games = game_data_list[start:start + 6]
         
-        # 6개로 나누고, 각 컬럼마다 컨테이너를 넣어 빈 공간이라도 높이를 유지하게 함
         cols = st.columns(6)
         for i in range(6):
             with cols[i]:
-                with st.container(height=250): # 높이를 강제로 고정하여 사라짐 방지
+                # 컨테이너 높이 고정으로 레이아웃 붕괴 방지
+                with st.container(height=260): 
                     if i < len(page_games):
                         game = page_games[i]
-                        if st.button("보기", key=f"btn_{i}"):
+                        # 카드 클릭 시 API 호출을 트리거하는 버튼
+                        if st.button("상세보기", key=f"btn_{i}"):
                             on_card_click(game)
                         st.markdown(f"""
                             <div class="custom-card">
@@ -30,5 +31,3 @@ class UIManager:
                                 <div class="team-text">{game['home_name']}</div>
                             </div>
                         """, unsafe_allow_html=True)
-                    else:
-                        st.write("")
