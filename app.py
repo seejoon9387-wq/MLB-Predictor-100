@@ -1,72 +1,64 @@
 import streamlit as st
+import statsapi
 import pandas as pd
 import numpy as np
 import os
 
-# --- 엔진: 승률 예측 알고리즘 ---
-def get_prediction(home_id, away_id):
+# --- 선발 투수 및 전력 기반 예측 엔진 ---
+def get_prediction(h_id, a_id, h_pitcher, a_pitcher):
     try:
-        # 데이터가 있는 폴더에서 파일 로드
-        if not os.path.exists('pitchers.csv.csv') or not os.path.exists('batters.csv.csv'):
-            return 50.0
-            
+        # 데이터 로드
         pitchers = pd.read_csv('pitchers.csv.csv')
         batters = pd.read_csv('batters.csv.csv')
         
-        # 데이터 클렌징 (팀 정보 매칭)
-        def get_offense(t_id):
-            b_data = batters[batters['team'].astype(str).str.contains(str(t_id), na=False)]
-            # OPS가 높을수록 공격력 강함
-            return b_data['ops'].mean() if not b_data.empty else 0.730 
+        # 선발 투수 데이터 찾기 (없으면 에러 발생 유도)
+        h_p_data = pitchers[pitchers['player'].str.contains(h_pitcher, na=False, case=False)]
+        a_p_data = pitchers[pitchers['player'].str.contains(a_pitcher, na=False, case=False)]
         
-        def get_defense(t_id):
-            p_data = pitchers[pitchers['team'].astype(str).str.contains(str(t_id), na=False)]
-            # ERA가 낮을수록 투수력이 강함
-            era_val = p_data['era'].mean() if not p_data.empty else 4.0
-            return 1 / (era_val + 0.5)
+        if h_p_data.empty or a_p_data.empty:
+            return None # 데이터 없음 반환
             
-        # 3중 가중치 계산: 공격(60%) + 수비(40%) + 홈어드밴티지(5%)
-        home_score = (get_offense(home_id) * 0.6) + (get_defense(home_id) * 0.4) + 0.05
-        away_score = (get_offense(away_id) * 0.6) + (get_defense(away_id) * 0.4)
+        # 전력 점수 계산
+        h_score = (1 / (h_p_data['era'].mean() + 0.1) * 0.7) + (batters[batters['team'].astype(str).str.contains(str(h_id), na=False)]['ops'].mean() * 0.3)
+        a_score = (1 / (a_p_data['era'].mean() + 0.1) * 0.7) + (batters[batters['team'].astype(str).str.contains(str(a_id), na=False)]['ops'].mean() * 0.3)
         
-        # 로지스틱 함수로 승률 변환 (10배 증폭하여 확률 차이를 명확히 함)
-        prob = 1 / (1 + np.exp(-(home_score - away_score) * 10))
+        prob = 1 / (1 + np.exp(-(h_score - a_score) * 10))
         return round(prob * 100, 1)
     except:
-        return 50.0
+        return None
 
-# --- UI: 화면 출력부 ---
 def main():
-    st.set_page_config(page_title="MLB 예측 엔진", layout="wide")
-    st.title("⚾ MLB 슈퍼컴퓨터 분석 엔진")
-    st.write("---")
+    st.title("⚾ 실시간 MLB 승률 예측 엔진")
+    
+    # 1. statsapi로 오늘 경기 가져오기
+    try:
+        games = statsapi.schedule(date=pd.Timestamp.now().strftime('%Y-%m-%d'))
+    except:
+        st.error("실시간 경기 정보를 가져올 수 없습니다.")
+        return
 
-    if os.path.exists('schedule.csv.csv'):
-        games_df = pd.read_csv('schedule.csv.csv')
+    for game in games:
+        h_name = game['home_name']
+        a_name = game['away_name']
+        h_id = game['home_id']
+        a_id = game['away_id']
         
-        for idx, row in games_df.iterrows():
-            # 데이터에서 ID와 이름 추출
-            h_val = row['home_team']
-            a_val = row['away_team']
+        # 실시간 선발 투수 정보 추출
+        # statsapi는 'home_probable_pitcher', 'away_probable_pitcher' 정보를 제공
+        h_p = game.get('home_probable_pitcher', 'Unknown')
+        a_p = game.get('away_probable_pitcher', 'Unknown')
+        
+        st.write(f"### {a_name} ({a_p}) vs {h_name} ({h_p})")
+        
+        # 2. 엔진 가동 및 결과 확인
+        win_prob = get_prediction(h_id, a_id, h_p, a_p)
+        
+        if win_prob is not None:
+            st.metric("홈팀 승리 확률", f"{win_prob}%")
+        else:
+            st.warning("⚠️ 선발 투수 데이터 부족으로 예측 불가 (DB 확인 필요)")
             
-            # ID/이름 구분 처리
-            h_id = h_val.get('id', 0) if isinstance(h_val, dict) else h_val
-            a_id = a_val.get('id', 0) if isinstance(a_val, dict) else a_val
-            h_name = h_val.get('name', 'Home') if isinstance(h_val, dict) else h_val
-            a_name = a_val.get('name', 'Away') if isinstance(a_val, dict) else a_val
-            
-            # 예측 실행
-            win_prob = get_prediction(h_id, a_id)
-            
-            # 화면 표시
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.write(f"### {a_name} vs {h_name}")
-            with col2:
-                st.metric("홈팀 승리 확률", f"{win_prob}%")
-            st.divider()
-    else:
-        st.error("데이터 파일(schedule.csv.csv 등)을 찾을 수 없습니다. 경로를 확인해주세요.")
+        st.divider()
 
 if __name__ == "__main__":
     main()
