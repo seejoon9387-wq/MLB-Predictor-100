@@ -2,22 +2,23 @@ import pandas as pd
 
 def create_main_registry(df):
     """
-    경기별 데이터 요약:
-    - game_pk를 기준으로 경기당 정보를 집계
-    - 승패 여부, 최종 점수, 공격/수비 지표 요약
+    데이터프레임에서 game_pk를 기준으로 경기별 요약 테이블 생성
     """
-    # 1. 경기별 핵심 지표 집계
+    # 1. 컬럼명이 소문자인지 확인 (데이터 로더에서 이미 소문자화했지만 안전을 위해)
+    df.columns = [c.lower() for c in df.columns]
+    
+    if 'game_pk' not in df.columns:
+        raise ValueError(f"registry.py: 데이터에 'game_pk' 컬럼이 없습니다. 현재 컬럼: {list(df.columns)}")
+    
+    # 2. 경기별 주요 스탯 요약 (피처 엔지니어링용)
     registry = df.groupby('game_pk').agg({
+        'game_date': 'first',
         'home_team': 'first',
         'away_team': 'first',
         'home_score': 'max',
         'away_score': 'max',
-        'game_year': 'first',
-        'launch_speed': 'mean',  # 경기 평균 타구 속도
-        'release_spin_rate': 'mean' # 경기 평균 투구 회전수
+        'launch_speed': 'mean',
+        'woba_value': 'mean'
     })
-    
-    # 2. 경기 승패(Target) 컬럼 생성
-    registry['home_win'] = (registry['home_score'] > registry['away_score']).astype(int)
     
     return registry
