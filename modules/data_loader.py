@@ -1,22 +1,23 @@
-# modules/data_loader.py
 import streamlit as st
 import pandas as pd
 import ast
 import os
 import zipfile
+from modules.time_series import set_time_index # 새로 만든 모듈 가져오기
 
 FILE_NAME = "mlb_full_data_slim.zip"
 
 @st.cache_data
 def load_data():
     if not os.path.exists(FILE_NAME):
-        raise FileNotFoundError(f"{FILE_NAME} 파일을 찾을 수 없습니다. 깃허브 업로드 상태를 확인하세요.")
+        raise FileNotFoundError(f"{FILE_NAME} 파일을 찾을 수 없습니다.")
     
     with zipfile.ZipFile(FILE_NAME, 'r') as z:
         file_list = z.namelist()
         with z.open(file_list[0]) as f:
             df = pd.read_csv(f)
     
+    # JSON 정제 로직
     for col in df.columns:
         sample = df[col].dropna()
         if not sample.empty and isinstance(sample.iloc[0], str) and sample.iloc[0].startswith('{'):
@@ -24,4 +25,9 @@ def load_data():
             expanded_df = pd.json_normalize(expanded)
             expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
             df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
+            
+    # 시계열 인덱싱 적용 (날짜 컬럼명을 데이터셋에 맞춰 수정하세요. 예: 'date', 'game_date' 등)
+    # 데이터셋에 맞는 컬럼명을 자동으로 찾거나 확인이 필요합니다.
+    df = set_time_index(df, date_col='date') 
+    
     return df
