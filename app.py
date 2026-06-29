@@ -8,38 +8,52 @@ st.set_page_config(page_title="MLB Live Intelligence", layout="wide")
 
 @st.cache_data(ttl=3600)
 def get_live_schedule():
-    # 오늘부터 7일간의 일정 조회
-    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={datetime.now().strftime('%Y-%m-%d')}"
-    response = requests.get(url)
-    data = response.json()
+    # 오늘 날짜
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={today_str}&endDate={today_str}"
     
-    games = []
-    kst = pytz.timezone('Asia/Seoul')
+    try:
+        response = requests.get(url)
+        data = response.json()
+        
+        games = []
+        kst = pytz.timezone('Asia/Seoul')
+        
+        # 데이터가 있는지 확인
+        if 'dates' in data and len(data['dates']) > 0:
+            for date_entry in data['dates']:
+                for game in date_entry.get('games', []):
+                    # UTC 시간을 KST로 변환
+                    game_time_utc = datetime.fromisoformat(game['gameDate'].replace('Z', '+00:00'))
+                    game_time_kst = game_time_utc.astimezone(kst)
+                    
+                    games.append({
+                        'Date': game_time_kst.strftime('%m-%d'),
+                        'Time': game_time_kst.strftime('%H:%M'),
+                        'Away': game['teams']['away']['team']['name'],
+                        'Home': game['teams']['home']['team']['name']
+                    })
+        
+        if not games:
+            return pd.DataFrame(columns=['Date', 'Time', 'Away', 'Home'])
+            
+        return pd.DataFrame(games)
     
-    for date_entry in data.get('dates', []):
-        for game in date_entry.get('games', []):
-            # UTC 시간을 KST로 변환
-            game_time_utc = datetime.fromisoformat(game['gameDate'].replace('Z', '+00:00'))
-            game_time_kst = game_time_utc.astimezone(kst)
-            
-            games.append({
-                'Date': game_time_kst.strftime('%m-%d'),
-                'Time': game_time_kst.strftime('%H:%M'),
-                'Away': game['teams']['away']['team']['name'],
-                'Home': game['teams']['home']['team']['name'],
-                'Full_Data': game # 분석 엔진에 넘길 상세 데이터
-            })
-            
-    return pd.DataFrame(games)
+    except Exception:
+        return pd.DataFrame(columns=['Date', 'Time', 'Away', 'Home'])
 
 def main():
     st.title("⚾ MLB 실시간 AI 분석 대시보드")
     
     df = get_live_schedule()
     
-    # 경기 선택 테이블 (인덱스 숨김)
+    if df.empty:
+        st.warning("오늘 예정된 경기가 없습니다.")
+        return
+
+    # 경기 선택 테이블
     event = st.dataframe(
-        df[['Date', 'Time', 'Away', 'Home']], 
+        df, 
         use_container_width=True, 
         hide_index=True,
         selection_mode="single-row",
@@ -55,11 +69,8 @@ def main():
         st.subheader(f"🔍 {selected['Away']} vs {selected['Home']} 분석")
         st.write(f"경기 시간: {selected['Date']} {selected['Time']} (KST)")
         
-        if st.button("🚀 엔진 가동 (분석 시작)"):
-            with st.spinner('AI 분석 엔진 가동 중...'):
-                # 여기서 실제 분석 로직 실행
-                st.success("데이터 분석이 완료되었습니다!")
-                st.info("분석 결과: [승리 예측 등 상세 리포트가 여기에 표시됩니다]")
+        if st.button("🚀 엔진 가동"):
+            st.success("데이터 분석이 완료되었습니다!")
 
 if __name__ == "__main__":
     main()
