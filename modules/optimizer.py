@@ -3,33 +3,26 @@ import numpy as np
 
 def optimize_data_types(df):
     """
-    데이터 타입 최적화:
-    - 수치형 데이터(int, float)만 대상으로 하여 메모리 최적화 수행
-    - 문자열이나 기타 타입은 건드리지 않아 데이터 타입 오류 방지
+    Pandas API를 사용하여 안전하게 숫자형 컬럼만 찾아 최적화합니다.
     """
     for col in df.columns:
-        # 1. 컬럼의 현재 타입 확인
-        col_type = df[col].dtype
-        
-        # 2. 'number' 계열(int 또는 float)인지 확인 (object, string 등은 제외)
-        if np.issubdtype(col_type, np.number):
+        # pd.api.types를 사용하여 안전하게 숫자형인지 확인
+        if pd.api.types.is_numeric_dtype(df[col]):
             col_min = df[col].min()
             col_max = df[col].max()
             
-            # 정수형(Integer)인 경우
-            if np.issubdtype(col_type, np.integer):
+            # 정수형 최적화
+            if pd.api.types.is_integer_dtype(df[col]):
                 if col_min > np.iinfo(np.int8).min and col_max < np.iinfo(np.int8).max:
                     df[col] = df[col].astype(np.int8)
                 elif col_min > np.iinfo(np.int16).min and col_max < np.iinfo(np.int16).max:
                     df[col] = df[col].astype(np.int16)
                 elif col_min > np.iinfo(np.int32).min and col_max < np.iinfo(np.int32).max:
                     df[col] = df[col].astype(np.int32)
-                # int64는 그대로 유지
             
-            # 실수형(Float)인 경우
-            else:
+            # 실수형 최적화
+            elif pd.api.types.is_float_dtype(df[col]):
                 if col_min > np.finfo(np.float32).min and col_max < np.finfo(np.float32).max:
                     df[col] = df[col].astype(np.float32)
-                # float64는 그대로 유지
                     
     return df
