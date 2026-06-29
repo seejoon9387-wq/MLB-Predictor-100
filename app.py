@@ -23,23 +23,25 @@ def main():
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    if st.button("🔄 실시간 데이터 업데이트"):
+    if st.button("🔄 새로고침"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 전체 영역을 8개의 칸으로 나누어 화살표와 카드 배치
-    col_left, col_mid, col_right = st.columns([1, 6, 1])
+    # 화살표와 카드 영역
+    col1, col2, col3 = st.columns([1, 10, 1])
     
-    with col_left:
-        if st.button("◀ 이전"):
+    with col1:
+        st.write("\n\n\n")
+        if st.button("◀"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
             
-    with col_mid:
+    with col2:
         UIManager.render_game_navbar(st.session_state.games, lambda g: st.session_state.update(selected_game=g, details=statsapi.game_data(g['id'])))
 
-    with col_right:
-        if st.button("다음 ▶"):
+    with col3:
+        st.write("\n\n\n")
+        if st.button("▶"):
             st.session_state.current_page += 1
             st.rerun()
 
