@@ -8,7 +8,6 @@ def fetch_data():
     raw_games = statsapi.schedule(date=datetime.now().strftime('%Y-%m-%d'))
     games = []
     for g in raw_games:
-        # 시간 변환 로직 (양식 고정)
         dt = datetime.strptime(g['game_datetime'], "%Y-%m-%dT%H:%M:%SZ")
         dt = dt.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Seoul'))
         games.append({
@@ -24,16 +23,15 @@ def fetch_data():
 def main():
     st.title("⚾ MLB 실시간 경기")
     
-    # 세션 상태에 데이터 초기화
     if 'games' not in st.session_state:
         st.session_state.games = fetch_data()
     
-    # 버튼 클릭 시 실행할 새로고침 함수
     def refresh():
-        st.session_state.games = fetch_data()
+        # 데이터 업데이트 중 스피너 표시
+        with st.spinner('실시간 정보를 불러오는 중입니다...'):
+            st.session_state.games = fetch_data()
         st.rerun()
 
-    # UI 렌더링 호출
     UIManager.render_game_navbar(st.session_state.games, refresh)
 
 if __name__ == "__main__":
