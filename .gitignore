@@ -1,1 +1,18 @@
+# 데이터 파일 및 압축 파일
+*.zip
+*.csv
+*.xlsx
 
+# 머신러닝 모델 및 결과물
+*.pkl
+*.joblib
+*.h5
+*.model
+
+# 시스템 및 임시 파일
+__pycache__/
+.DS_Store
+.env
+.venv/
+.streamlit/
+archives/
