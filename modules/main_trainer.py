@@ -12,34 +12,44 @@ from modules.evolution import SelfEvolvingLoop
 logger = get_logger("MLB_Master_System")
 
 class MLBUnifiedTrainer:
-    def __init__(self):
-        self.data = load_data()
+    def __init__(self, analysis_mode=False):
+        # 호출 시 인자 전달
+        logger.info(f"시스템 초기화: analysis_mode={analysis_mode}")
+        self.data = load_data(analysis_mode=analysis_mode)
         self.model = None
         self.X_train, self.y_train = None, None
 
     def run(self):
         try:
+            if self.data.empty:
+                logger.error("데이터 로드 실패: 파일을 확인하세요.")
+                return
+
             df = self.data.sort_values('date').reset_index(drop=True)
-            X = remove_collinear_features(df.drop(columns=['is_home_win', 'date', 'game_pk']))
+            X = remove_collinear_features(df.drop(columns=['is_home_win', 'date', 'game_pk'], errors='ignore'))
             y = df['is_home_win']
             
+            # 시간 기반 분할
             split_idx = int(len(df) * 0.8)
             self.X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
             self.y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
             
-            logger.info("학습 파이프라인 시작")
+            logger.info("최적화 및 학습 파이프라인 시작")
             best_params = tune_xgboost(self.X_train, self.y_train, X_test, y_test)
             
             self.model = xgb.XGBClassifier(**best_params, n_jobs=-1)
             self.model.fit(self.X_train, self.y_train)
             
-            # 자가 진화 실행
+            # 자가 진화 루프 실행
             evolution = SelfEvolvingLoop(self)
             evolution.run_evolution_cycle()
             
-            logger.info("모든 프로세스 완료")
+            logger.info("파이프라인 정상 종료")
+            
         except Exception as e:
-            logger.error(f"시스템 오류: {str(e)}", exc_info=True)
+            logger.error(f"시스템 오류 발생: {str(e)}", exc_info=True)
 
 if __name__ == "__main__":
-    MLBUnifiedTrainer().run()
+    # 실행 시 analysis_mode 설정 (기본값 False)
+    trainer = MLBUnifiedTrainer(analysis_mode=True)
+    trainer.run()
