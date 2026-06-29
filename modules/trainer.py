@@ -1,3 +1,4 @@
+import pandas as pd
 import xgboost as xgb
 import joblib
 from sklearn.model_selection import TimeSeriesSplit
@@ -21,8 +22,8 @@ class MLBPredictionTrainer:
         X = df.drop(columns=[target, 'game_pk', 'date'], errors='ignore')
         y = df[target]
         
-        # 시계열 분할
         tscv = TimeSeriesSplit(n_splits=5)
+        X_train, X_test, y_train, y_test = None, None, None, None
         for _, test_idx in tscv.split(X):
             X_train, X_test = X.iloc[:test_idx[0]], X.iloc[test_idx]
             y_train, y_test = y.iloc[:test_idx[0]], y.iloc[test_idx]
@@ -30,8 +31,9 @@ class MLBPredictionTrainer:
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
         
-        # 학습
-        self.model = xgb.XGBClassifier(n_estimators=1000, learning_rate=0.03, max_depth=7, n_jobs=-1)
+        self.model = xgb.XGBClassifier(
+            n_estimators=1000, learning_rate=0.03, max_depth=7, n_jobs=-1
+        )
         self.model.fit(X_train_scaled, y_train)
         
         print(classification_report(y_test, self.model.predict(X_test_scaled)))
