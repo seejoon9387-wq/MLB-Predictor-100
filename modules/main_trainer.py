@@ -1,46 +1,57 @@
+import streamlit as st
 import pandas as pd
-from modules.simulator import simulate_match_scenarios
+from modules.main_trainer import MLBUnifiedTrainer
 
-class MLBUnifiedTrainer:
-    def __init__(self, data=None):
-        """
-        초기화 시 데이터를 선택적으로 받으며,
-        데이터가 없어도 에러를 발생시키지 않도록 설계함.
-        """
-        self.data = data if data is not None else pd.DataFrame()
+st.set_page_config(page_title="MLB AI Analyst", layout="wide")
 
-    def analyze(self, input_data):
-        """
-        데이터를 분석하여 최종 리포트를 반환합니다.
-        input_data가 딕셔너리든 데이터프레임이든 모두 안전하게 처리합니다.
-        """
-        try:
-            # 1. 데이터를 항상 시리즈/딕셔너리처럼 다룰 수 있게 표준화
-            # KeyError 방지를 위해 .get() 사용이 필수
-            if isinstance(input_data, dict):
-                game_pk = input_data.get('game_pk', 'Unknown')
-                data_for_sim = input_data
-            else:
-                # 데이터프레임의 첫 번째 행을 딕셔너리로 변환
-                data_for_sim = input_data.to_dict() if hasattr(input_data, 'to_dict') else input_data
-                game_pk = data_for_sim.get('game_pk', 'Unknown')
+@st.cache_data(ttl=600)
+def get_mlb_schedule():
+    # 실제 API 연동 또는 데이터 준비 로직
+    return pd.DataFrame([
+        {'Time': '22:35', 'Away': 'Chicago White Sox', 'Home': 'Baltimore Orioles', 'game_pk': 824822},
+        {'Time': '22:40', 'Away': 'Pittsburgh Pirates', 'Home': 'Philadelphia Phillies', 'game_pk': 823444}
+    ])
 
-            # 2. 시뮬레이터 실행
-            sim_result = simulate_match_scenarios(data_for_sim)
+def main():
+    st.title("⚾ MLB AI 전문 분석 대시보드")
+    
+    # 1. 경기 일정표 출력 (항상 보이게 상단에 배치)
+    st.subheader("📅 오늘의 경기 일정")
+    df = get_mlb_schedule()
+    event = st.dataframe(df[['Time', 'Away', 'Home']], use_container_width=True, hide_index=True, selection_mode="single-row", on_select="rerun")
+    
+    # 2. 선택된 경기가 있을 경우 분석 영역 표시
+    if event.selection.rows:
+        selected_idx = event.selection.rows[0]
+        selected_game = df.iloc[selected_idx]
+        
+        st.divider()
+        st.subheader(f"🔍 {selected_game['Away']} vs {selected_game['Home']} 정밀 분석")
+        
+        if st.button("🚀 엔진 가동"):
+            with st.spinner('AI 분석 엔진 가동 중...'):
+                try:
+                    # 데이터 입력 (선택한 게임의 PK 포함)
+                    data_input = {
+                        'game_pk': selected_game['game_pk'],
+                        'bayesian_win_rate': 0.52,
+                        'climate_adjusted_prob': 0.15,
+                        'inefficiency_score': 0.08
+                    }
+                    
+                    trainer = MLBUnifiedTrainer()
+                    result = trainer.analyze(data_input)
+                    
+                    # 결과 출력
+                    st.success("데이터 분석 완료")
+                    
+                    col1, col2 = st.columns(2)
+                    col1.metric("승리 예측", result.get('winner'))
+                    col2.metric("확신도", f"{result.get('confidence')}%")
+                    st.info(result.get('detailed_report'))
+                    
+                except Exception as e:
+                    st.error(f"분석 오류: {e}")
 
-            # 3. 분석 결과 리포트 생성 (방어적 구조)
-            report = {
-                'winner': 'Home' if sim_result > 0.5 else 'Away',
-                'confidence': round(min(abs(sim_result - 0.5) * 200, 99.9), 1),
-                'detailed_report': f"게임 ID {game_pk}에 대한 분석이 완료되었습니다. "
-                                   f"산출된 로직 점수는 {sim_result:.2f}입니다."
-            }
-            return report
-
-        except Exception as e:
-            # 엔진 내부에서 문제가 생겨도 앱을 죽이지 않고 에러 메시지만 반환
-            return {
-                'error': str(e),
-                'status': 'failed',
-                'message': '분석 엔진에서 처리할 수 없는 데이터 구조입니다.'
-            }
+if __name__ == "__main__":
+    main()
