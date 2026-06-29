@@ -1,4 +1,3 @@
-# modules/data_loader.py
 import streamlit as st
 import pandas as pd
 import ast
@@ -27,7 +26,7 @@ def load_data():
             expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
             df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
             
-    # 시계열 인덱싱 적용: 이제 정확히 'game_date'를 사용합니다.
-    df = set_time_index(df, date_col='game_date') 
+    # 시계열 인덱싱 적용 (game_pk 사용)
+    df = set_time_index(df)
     
     return df
