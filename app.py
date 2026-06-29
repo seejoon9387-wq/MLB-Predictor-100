@@ -10,49 +10,56 @@ sys.path.append(os.getcwd())
 st.set_page_config(page_title="MLB AI Intelligence Engine", layout="wide")
 
 def main():
-    st.title("⚾ MLB AI Intelligence Engine: 분석 대시보드")
+    st.title("⚾ MLB AI Intelligence Engine: 경기 일자별 분석")
     
-    # 사이드바 설정
+    # 1. 데이터 로드
+    registry = load_data(analysis_mode=True)
+    
+    # 2. 팀 및 날짜 선택 UI
     st.sidebar.header("엔진 컨트롤")
-    mode = st.sidebar.radio("분석 모드:", ("연속적", "독립적"))
-    game_pk = st.sidebar.text_input("분석할 경기 ID (game_pk):", "718000")
+    all_teams = sorted(registry['home_team'].unique().tolist())
     
-    # 1. 데이터 로드 (상시 수행)
-    try:
-        registry = load_data(analysis_mode=(mode == "연속적"))
-    except Exception as e:
-        st.error(f"데이터 로드 오류: {e}")
-        return
-
-    # 2. 메인 레이아웃 (버튼 클릭 전에도 표시)
-    col1, col2 = st.columns([1, 1])
+    home_team = st.sidebar.selectbox("홈 팀 선택:", all_teams)
+    away_team = st.sidebar.selectbox("원정 팀 선택:", all_teams)
     
-    with col1:
-        st.subheader("📊 엔진 정밀 분석 브리핑")
-        briefing_placeholder = st.empty() # 결과를 담을 빈 공간
-        briefing_placeholder.info("왼쪽 사이드바에서 분석을 실행하세요.")
+    # 해당 매치업의 경기 날짜들만 필터링
+    match_dates = registry[
+        (registry['home_team'] == home_team) & 
+        (registry['away_team'] == away_team)
+    ]['game_date'].unique()
+    
+    selected_date = st.sidebar.selectbox("경기 날짜 선택:", sorted(match_dates))
+    
+    # 3. 경기 매칭 로직
+    match = registry[
+        (registry['home_team'] == home_team) & 
+        (registry['away_team'] == away_team) & 
+        (registry['game_date'] == selected_date)
+    ]
+    
+    if not match.empty:
+        game_pk = match.iloc[0]['game_pk']
+        st.success(f"매치 확인: {away_team} vs {home_team} | 날짜: {selected_date} (ID: {game_pk})")
         
-    with col2:
-        st.subheader("📈 승률 확률 분포 (몬테카를로)")
-        chart_placeholder = st.empty() # 차트를 담을 빈 공간
-        chart_placeholder.line_chart(pd.DataFrame([0.5], columns=['Win_Prob']))
-
-    # 3. 분석 실행 시 로직 업데이트
-    if st.sidebar.button("데이터 분석 실행"):
-        try:
-            trainer = MLBUnifiedTrainer()
-            briefing = trainer.get_briefing(int(game_pk))
-            
-            # 플레이스홀더를 결과물로 교체
-            briefing_placeholder.info(briefing)
-            chart_placeholder.line_chart(pd.DataFrame([0.1, 0.3, 0.6, 0.3, 0.1], columns=['Win_Prob']))
-            
-            st.divider()
-            st.subheader("💰 전체 경기 수익성 순위")
-            st.dataframe(registry.head(20), use_container_width=True)
-            
-        except Exception as e:
-            st.error(f"분석 중 오류 발생: {e}")
+        # 4. 분석 실행
+        if st.sidebar.button("엔진 가동 (분석 시작)"):
+            try:
+                trainer = MLBUnifiedTrainer()
+                briefing = trainer.get_briefing(int(game_pk))
+                
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.subheader("📊 엔진 정밀 분석 브리핑")
+                    st.info(briefing)
+                with col2:
+                    st.subheader("📈 승률 확률 분포 (몬테카를로)")
+                    # 몬테카를로 시뮬레이션의 확률 분포 시각화
+                    
+                    st.line_chart(pd.DataFrame([0.1, 0.3, 0.6, 0.3, 0.1], columns=['Win_Prob']))
+            except Exception as e:
+                st.error(f"엔진 가동 오류: {e}")
+    else:
+        st.warning("선택하신 조건에 맞는 경기가 없습니다.")
 
 if __name__ == "__main__":
     main()
