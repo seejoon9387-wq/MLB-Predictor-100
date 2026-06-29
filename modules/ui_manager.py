@@ -5,7 +5,7 @@ class UIManager:
     def render_game_navbar(game_data_list, on_card_click):
         st.markdown("""
             <style>
-                /* 버튼의 테두리, 배경, 그림자를 모두 제거하여 투명하게 만듦 */
+                /* 카드 클릭용 투명 버튼 */
                 div[data-testid="stButton"] button {
                     background: transparent !important;
                     border: none !important;
@@ -32,9 +32,8 @@ class UIManager:
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    # 카드Wrapper 내부에 투명 버튼 배치
                     st.markdown('<div class="card-wrapper">', unsafe_allow_html=True)
-                    if st.button(" ", key=f"card_{i}"):
+                    if st.button(" ", key=f"card_btn_{i}"):
                         on_card_click(game)
                     st.markdown(f"""
                         <div class="custom-card">
@@ -44,3 +43,5 @@ class UIManager:
                             <div class="text-row text-team">{game.get('home_name', 'HOM')}</div>
                         </div>
                     </div>""", unsafe_allow_html=True)
+                else:
+                    st.write("")
