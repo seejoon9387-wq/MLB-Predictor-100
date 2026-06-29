@@ -5,6 +5,7 @@ import json
 import io
 from modules import summary, search
 
+# 구글 드라이브 파일 ID (기존 ID 유지)
 FILE_IDS = {
     "batters": "1UAgU7QH65LOqAaicg-Snrn26wfniDOWT",
     "pitchers": "1jNHpBgB_NXuI5Aedw5j0qG05u9eSFyHT",
@@ -18,16 +19,16 @@ def load_all_data():
     errors = []
     for key, file_id in FILE_IDS.items():
         try:
-            url = f"https://drive.google.com/uc?export=download&id={file_id}"
+            # 핵심: 구글 드라이브 API를 통한 직접 파일 스트림 접근
+            url = f"https://docs.google.com/uc?export=download&id={file_id}"
             response = requests.get(url)
+            response.raise_for_status() # 오류 발생 시 즉시 감지
             
-            # 1. 데이터를 줄 단위로 JSON 리스트로 읽기
-            lines = [json.loads(line) for line in response.text.strip().split('\n') if line.strip()]
+            # JSONL(줄바꿈 구분 JSON) 형식으로 읽기 시도
+            lines = response.text.strip().split('\n')
+            data_list = [json.loads(line) for line in lines if line.strip()]
+            data[key] = pd.json_normalize(data_list)
             
-            # 2. json_normalize를 사용하여 딕셔너리 키를 컬럼으로 펼치기
-            df = pd.json_normalize(lines)
-            
-            data[key] = df
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
     return data, errors
@@ -37,7 +38,6 @@ def main():
     st.title("⚾ MLB 분석 엔진")
     
     data, errors = load_all_data()
-    
     if errors:
         for err in errors: st.error(err)
         st.stop()
