@@ -1,58 +1,41 @@
 import streamlit as st
 import pandas as pd
-import json
+import ast
 
+# 파일 경로
 FILE_PATHS = {
-    "batters": "batters.csv.csv",
-    "pitchers": "pitchers.csv.csv",
-    "schedule": "schedule.csv.csv"
+    "batters": "batters.csv.csv" # 데이터가 들어있는 파일명으로 수정하세요
 }
 
 @st.cache_data
 def load_data(file_path):
-    data_list = []
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if not line: continue
-            try:
-                # 각 줄이 JSON 객체 형태라면 파싱
-                if line.startswith('{'):
-                    data_list.append(json.loads(line))
-            except json.JSONDecodeError:
-                # 오류가 발생하면 무시하고 다음 줄로 이동
-                continue
+    # CSV를 읽되, 일단 모든 것을 문자열로 읽음
+    df = pd.read_csv(file_path)
     
-    # 딕셔너리 리스트를 데이터프레임으로 변환
-    if data_list:
-        return pd.DataFrame(data_list)
-    return pd.DataFrame()
+    # 딕셔너리처럼 보이는 문자열 컬럼들을 찾아 실제 딕셔너리로 변환 후 컬럼 분리
+    for col in df.columns:
+        # 첫 번째 값이 '{'로 시작하면 딕셔너리 형태의 문자열임
+        if isinstance(df[col].iloc[0], str) and df[col].iloc[0].startswith('{'):
+            # 문자열을 실제 딕셔너리로 변환
+            expanded = df[col].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
+            # 딕셔너리 내부 키(예: name, fullName)를 새로운 컬럼으로 생성
+            expanded_df = pd.json_normalize(expanded)
+            # 기존 컬럼 이름 뒤에 접미사 추가하여 병합 (예: team.name)
+            expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
+            df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
+            
+    return df
 
 def main():
     st.set_page_config(page_title="MLB 분석 엔진", layout="wide")
     st.title("⚾ MLB 분석 엔진")
     
-    all_data = {}
-    for key, path in FILE_PATHS.items():
-        try:
-            all_data[key] = load_data(path)
-        except Exception as e:
-            st.error(f"파일 로딩 중 심각한 오류 ({key}): {e}")
-    
-    st.sidebar.title("메뉴")
-    menu = st.sidebar.radio("분석 선택", ["데이터 요약", "선수 검색"])
-    
-    if menu == "데이터 요약":
-        for name, df in all_data.items():
-            if not df.empty:
-                st.write(f"### {name} 데이터")
-                st.dataframe(df, use_container_width=True)
-            else:
-                st.write(f"### {name} 데이터가 비어있거나 읽을 수 없습니다.")
-    
-    elif menu == "선수 검색":
-        # ... (검색 로직) ...
-        st.write("선수 검색 기능을 사용하려면 데이터가 성공적으로 로드되어야 합니다.")
+    try:
+        df = load_data("batters.csv.csv")
+        st.write("### 데이터 요약")
+        st.dataframe(df, use_container_width=True)
+    except Exception as e:
+        st.error(f"데이터 로딩 실패: {e}")
 
 if __name__ == "__main__":
     main()
