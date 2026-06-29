@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
-import ast
+import json
 import io
 from modules import summary, search
 
@@ -21,18 +21,13 @@ def load_all_data():
             url = f"https://drive.google.com/uc?export=download&id={file_id}"
             response = requests.get(url)
             
-            # 각 줄을 문자열로 읽은 뒤 딕셔너리로 강제 변환
-            lines = response.text.strip().split('\n')
-            parsed_data = []
-            for line in lines:
-                try:
-                    # literal_eval을 사용해 문자열 형태의 딕셔너리를 실제 딕셔너리로 변환
-                    parsed_data.append(ast.literal_eval(line.strip()))
-                except:
-                    continue
+            # 1. 데이터를 줄 단위로 JSON 리스트로 읽기
+            lines = [json.loads(line) for line in response.text.strip().split('\n') if line.strip()]
             
-            data[key] = pd.DataFrame(parsed_data)
+            # 2. json_normalize를 사용하여 딕셔너리 키를 컬럼으로 펼치기
+            df = pd.json_normalize(lines)
             
+            data[key] = df
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
     return data, errors
@@ -42,6 +37,7 @@ def main():
     st.title("⚾ MLB 분석 엔진")
     
     data, errors = load_all_data()
+    
     if errors:
         for err in errors: st.error(err)
         st.stop()
