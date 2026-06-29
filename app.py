@@ -2,6 +2,7 @@ import sys
 import os
 import streamlit as st
 import pandas as pd
+st.write("시스템 테스트: 현재 코드가 정상적으로 로드되었습니다.")
 from modules.data_loader import load_data
 from modules.main_trainer import MLBUnifiedTrainer
 
