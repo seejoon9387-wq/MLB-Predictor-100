@@ -26,32 +26,43 @@ def main():
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    if st.button("🔄 새로고침"):
+    if st.button("🔄 데이터 새로고침"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 화살표와 카드 영역
-    col_l, col_m, col_r = st.columns([1, 10, 1])
+    # 화살표와 카드 배치
+    main_row = st.columns([1, 12, 1])
     
-    with col_l:
+    with main_row[0]:
         if st.button("◀ 이전"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
             
-    with col_m:
-        UIManager.render_game_navbar(st.session_state.games, lambda g: st.session_state.update(selected_game=g, details=statsapi.game_data(g['id'])))
-        
-    with col_r:
+    with main_row[1]:
+        # 상세 보기 버튼 클릭 시 실행될 함수
+        def handle_click(game):
+            st.session_state.selected_game = game
+            st.session_state.details = statsapi.game_data(game['id'])
+            st.rerun()
+            
+        UIManager.render_game_navbar(st.session_state.games, handle_click)
+
+    with main_row[2]:
         if st.button("다음 ▶"):
             st.session_state.current_page += 1
             st.rerun()
 
-    # 상세 정보
+    # 결과 표시
     if 'selected_game' in st.session_state:
         st.divider()
         g = st.session_state.selected_game
-        st.subheader(f"📍 {g.get('away_name')} vs {g.get('home_name')} 상세 정보")
-        st.write("상세 정보가 로드되었습니다.")
+        details = st.session_state.details
+        st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 정보")
+        # 데이터가 비어있지 않은지 체크
+        if details:
+            st.write(f"경기 상태: {details['gameData']['status']['detailedState']}")
+        else:
+            st.write("상세 정보를 불러올 수 없습니다.")
 
 if __name__ == "__main__":
     main()
