@@ -1,4 +1,3 @@
 streamlit
-pandas
+mlb-statsapi
 requests
-pytz
