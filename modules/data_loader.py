@@ -1,9 +1,10 @@
+# modules/data_loader.py
 import streamlit as st
 import pandas as pd
 import ast
 import os
 import zipfile
-from modules.time_series import set_time_index # 새로 만든 모듈 가져오기
+from modules.time_series import set_time_index
 
 FILE_NAME = "mlb_full_data_slim.zip"
 
@@ -26,8 +27,7 @@ def load_data():
             expanded_df.columns = [f"{col}_{subcol}" for subcol in expanded_df.columns]
             df = pd.concat([df.drop(columns=[col]), expanded_df], axis=1)
             
-    # 시계열 인덱싱 적용 (날짜 컬럼명을 데이터셋에 맞춰 수정하세요. 예: 'date', 'game_date' 등)
-    # 데이터셋에 맞는 컬럼명을 자동으로 찾거나 확인이 필요합니다.
-    df = set_time_index(df, date_col='date') 
+    # 시계열 인덱싱 적용: 이제 정확히 'game_date'를 사용합니다.
+    df = set_time_index(df, date_col='game_date') 
     
     return df
