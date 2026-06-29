@@ -19,7 +19,7 @@ def fetch_data():
 def main():
     st.set_page_config(layout="wide")
     st.title("⚾ MLB 실시간 경기")
-    
+
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
@@ -27,41 +27,33 @@ def main():
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 콜백 함수: 카드를 누르면 상세 데이터를 불러오고 상태에 저장
-    def handle_card_click(game):
-        with st.spinner('실시간 상세 정보 로딩 중...'):
-            st.session_state.selected_game = game
-            st.session_state.details = statsapi.game_data(game['id'])
-
     col1, col2, col3 = st.columns([1, 10, 1])
-    
     with col1:
-        if st.button("◀"):
+        if st.button("◀ 이전"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
-            
     with col2:
+        def handle_card_click(game):
+            st.session_state.selected_game = game
+            st.session_state.details = statsapi.game_data(game['id'])
+            st.rerun()
+            
         UIManager.render_game_navbar(st.session_state.games, handle_card_click)
-
     with col3:
-        if st.button("▶"):
+        if st.button("다음 ▶"):
             st.session_state.current_page += 1
             st.rerun()
 
-    # 상세 정보 출력부 복구
     if 'selected_game' in st.session_state and 'details' in st.session_state:
         st.divider()
         g = st.session_state.selected_game
         details = st.session_state.details
-        st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 상세 정보")
-        
-        # 상세 데이터 출력 (기존 기능 복구)
+        st.subheader(f"📍 {g['away_name']} vs {g['home_name']} 실시간 상세 정보")
         try:
             weather = details['gameData']['weather'].get('condition', '정보 없음')
             st.write(f"🌤 **날씨**: {weather}")
-            # 추가 필요한 정보가 있다면 여기에 계속 추가하시면 됩니다.
         except:
-            st.error("상세 정보를 불러오는 중 오류가 발생했습니다.")
+            st.write("상세 정보를 불러오는 중입니다...")
 
 if __name__ == "__main__":
     main()
