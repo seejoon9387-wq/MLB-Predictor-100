@@ -7,17 +7,26 @@ import os
 # --- 1. 예측 엔진부 ---
 def get_prediction(h_id, a_id, h_pitcher, a_pitcher):
     try:
-        if not os.path.exists('pitchers.csv.csv') or not os.path.exists('batters.csv.csv'):
-            return None
-            
+        # 데이터가 경로에 정확히 있는지 다시 한번 확인
         pitchers = pd.read_csv('pitchers.csv.csv')
         batters = pd.read_csv('batters.csv.csv')
         
-        # 이름 매칭 함수 (성(Last Name) 위주 부분 매칭)
+        # --- 고도화된 이름 매칭 함수 ---
         def find_pitcher_stats(full_name):
             if full_name == 'Unknown': return None
-            last_name = str(full_name).split()[-1]
-            match = pitchers[pitchers['player'].str.contains(last_name, na=False, case=False)]
+            
+            # 검색을 위한 이름 분해
+            name_parts = str(full_name).split()
+            first = name_parts[0]
+            last = name_parts[-1]
+            
+            # 1. 'First Last' 검색
+            match = pitchers[pitchers['player'].str.contains(f"{first}.*{last}", na=False, case=False)]
+            
+            # 2. 실패 시 'Last, First' 검색 (데이터가 성, 이름 순일 경우 대비)
+            if match.empty:
+                match = pitchers[pitchers['player'].str.contains(f"{last}.*{first}", na=False, case=False)]
+                
             return match['era'].mean() if not match.empty else None
 
         h_era = find_pitcher_stats(h_pitcher)
@@ -34,7 +43,7 @@ def get_prediction(h_id, a_id, h_pitcher, a_pitcher):
         
         prob = 1 / (1 + np.exp(-(h_score - a_score) * 10))
         return round(prob * 100, 1)
-    except:
+    except Exception as e:
         return None
 
 # --- 2. 메인 실행부 (UI) ---
@@ -42,7 +51,6 @@ def main():
     st.set_page_config(page_title="MLB 승률 예측 시스템", layout="wide")
     st.title("⚾ 실시간 MLB 승률 예측 엔진")
     
-    # 오늘 날짜 기준 데이터 호출
     try:
         games = statsapi.schedule(date=pd.Timestamp.now().strftime('%Y-%m-%d'))
     except:
@@ -62,7 +70,8 @@ def main():
         if win_prob is not None:
             st.metric("홈팀 승리 확률", f"{win_prob}%")
         else:
-            st.warning(f"⚠️ 데이터 부족: '{h_p}' 또는 '{a_p}'의 기록을 DB에서 찾을 수 없습니다.")
+            # 매칭 실패 시 디버깅을 위해 DB상의 어떤 이름과 비교했는지 힌트 제공
+            st.warning(f"⚠️ 매칭 실패: '{h_p}' 또는 '{a_p}'를 DB에서 찾을 수 없습니다. (이름 표기법 확인 필요)")
         st.divider()
 
 if __name__ == "__main__":
