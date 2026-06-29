@@ -3,22 +3,24 @@ import streamlit as st
 class UIManager:
     @staticmethod
     def render_game_navbar(game_data_list):
-        # 1. 화살표 전용 상단 컨테이너와 하단 카드 컨테이너 분리
         st.markdown("""
             <style>
-                /* 화살표를 양 끝으로 벌리는 컨테이너 */
-                .arrow-container { 
+                /* 화살표를 좌우 끝으로 완전히 벌리는 컨테이너 */
+                .arrow-wrapper { 
                     display: flex !important; 
                     justify-content: space-between !important; 
+                    align-items: center !important; 
                     width: 100% !important; 
-                    margin-bottom: 10px;
+                    padding: 0 10px !important;
+                    margin-bottom: 20px;
                 }
-                /* 카드 배치 컨테이너 */
+                /* 카드 컨테이너는 중앙 정렬 유지 */
                 .card-container { 
                     display: flex !important; 
                     justify-content: center !important; 
                     gap: 15px !important; 
                     flex-wrap: nowrap !important;
+                    width: 100%;
                 }
                 .fixed-card { 
                     width: 150px !important; height: 100px !important; 
@@ -33,23 +35,23 @@ class UIManager:
 
         if 'current_page' not in st.session_state: st.session_state.current_page = 0
         
-        # 2. 화살표 레이아웃 (최상단, 양 끝 배치)
-        st.markdown('<div class="arrow-container">', unsafe_allow_html=True)
+        # 1. 화살표 레이아웃 (양 끝 배치)
+        st.markdown('<div class="arrow-wrapper">', unsafe_allow_html=True)
         
-        # 왼쪽 화살표 (이 컨테이너 안에서는 flex로 정렬됨)
-        if st.button("◀", key="prev_top"):
+        # 왼쪽 화살표 (왼쪽 끝)
+        if st.button("◀", key="prev_left"):
             if st.session_state.current_page > 0:
                 st.session_state.current_page -= 1
                 st.rerun()
 
-        # 오른쪽 화살표
-        if st.button("▶", key="next_top"):
+        # 오른쪽 화살표 (오른쪽 끝)
+        if st.button("▶", key="next_right"):
             st.session_state.current_page += 1
             st.rerun()
             
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # 3. 카드 레이아웃 (화살표 아래에 별도 배치)
+        # 2. 카드 레이아웃 (중앙)
         st.markdown('<div class="card-container">', unsafe_allow_html=True)
         start = st.session_state.current_page * 6
         page_games = game_data_list[start:start + 6]
