@@ -1,3 +1,18 @@
+import subprocess
+import sys
+
+# 라이브러리 강제 설치 (Streamlit 시작 시 실행)
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+try:
+    import pybaseball
+except ImportError:
+    install("pybaseball")
+    import pybaseball
+
+import streamlit as st
+# ... 이후 코드 작성
 import streamlit as st
 import pandas as pd
 from datetime import datetime
