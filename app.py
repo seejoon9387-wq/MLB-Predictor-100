@@ -1,43 +1,37 @@
 import streamlit as st
 import statsapi
-from datetime import datetime, timedelta
 from modules.ui_manager import UIManager
 
-def get_filtered_mlb_data():
-    # 시차를 고려해 미국 날짜 6월 29일과 30일 데이터를 모두 가져와야 한국 6월 30일 경기가 포함됨
-    raw_data = statsapi.schedule(start_date='2026-06-29', end_date='2026-06-30')
+def show_game_details(game_id):
+    st.subheader("⚾ 경기 상세 정보")
+    # statsapi로 상세 데이터 조회
+    data = statsapi.game_data(game_id)
     
-    filtered_data = []
-    for game in raw_data:
-        try:
-            # UTC 시간을 KST로 변환
-            dt_utc = datetime.strptime(game['game_datetime'], "%Y-%m-%dT%H:%M:%SZ")
-            dt_kst = dt_utc + timedelta(hours=9)
-            
-            # KST 날짜가 정확히 2026-06-30인 경우만 추가
-            if dt_kst.strftime("%Y-%m-%d") == "2026-06-30":
-                # UIManager에서 쓰기 편하게 KST 시간 정보를 주입
-                game['display_date'] = dt_kst.strftime("%m월 %d일")
-                game['display_time'] = dt_kst.strftime("%H:%M")
-                filtered_data.append(game)
-        except:
-            continue
-            
-    return filtered_data
+    # 1. 선발 투수
+    st.write(f"**선발 투수:** {data['lineups']['home'][0]} vs {data['lineups']['away'][0]}")
+    
+    # 2. 경기장 정보
+    st.write(f"**경기장:** {data['venue']['name']}")
+    
+    # 3. 날씨 정보
+    weather = data.get('weather', {})
+    st.write(f"**날씨:** {weather.get('condition', '정보없음')} / 온도: {weather.get('temp', 'N/A')}")
+    
+    # 4. 부상자 및 기타 정보 (statsapi의 game_data는 매우 상세합니다)
+    with st.expander("라인업 및 추가 정보 확인"):
+        st.json(data['lineups']) # 상세 라인업 출력
 
 def main():
-    st.set_page_config(layout="wide")
-    st.title("⚾ 2026년 6월 30일 한국 시간 MLB 경기")
+    st.title("⚾ MLB 실시간 경기 센터")
     
-    if st.button("🔄 데이터 새로고침"):
-        st.rerun()
-        
-    games = get_filtered_mlb_data()
-    
-    if games:
-        UIManager.render_game_navbar(games)
+    # 게임 선택 상태 관리
+    if 'selected_game_id' in st.session_state:
+        if st.button("⬅ 목록으로 돌아가기"):
+            del st.session_state.selected_game_id
+            st.rerun()
+        show_game_details(st.session_state.selected_game_id)
     else:
-        st.info("한국 시간 6월 30일 진행되는 경기가 리스트에 없습니다. (데이터 업데이트 지연 가능성)")
+        games = get_filtered_mlb_data()
+        UIManager.render_game_navbar(games)
 
-if __name__ == "__main__":
-    main()
+# ... 나머지 함수들 ...
