@@ -5,7 +5,7 @@ class UIManager:
     def render_game_navbar(game_data_list, on_card_click):
         st.markdown("""
             <style>
-                .custom-card { width: 100% !important; height: 180px !important; border: 2px solid #d9ded5 !important; border-radius: 12px !important; background-color: #fcfcf8; display: flex !important; flex-direction: column !important; justify-content: space-around !important; align-items: center !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; padding: 10px 0 !important; }
+                .custom-card { width: 100% !important; height: 180px !important; border: 2px solid #d9ded5 !important; border-radius: 12px !important; background-color: #fcfcf8; display: flex !important; flex-direction: column !important; justify-content: space-around !important; align-items: center !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important; padding: 10px 0 !important; cursor: pointer; }
                 .card-wrapper { padding: 5px; }
                 .text-row { display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; height: 30px !important; text-align: center !important; }
                 .text-date { font-size: 12px !important; color: #697465 !important; font-weight: 500; }
@@ -22,7 +22,8 @@ class UIManager:
             with col:
                 if i < len(page_games):
                     game = page_games[i]
-                    if st.button("상세보기", key=f"select_{i}"):
+                    # 카드 전체를 클릭하게 만들기 위해 폼 내부 버튼 사용 (상세보기 텍스트 없음)
+                    if st.button(" ", key=f"card_{i}"):
                         on_card_click(game)
                     st.markdown(f"""
                         <div class="card-wrapper">
@@ -34,5 +35,3 @@ class UIManager:
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
-                else:
-                    st.write("")
