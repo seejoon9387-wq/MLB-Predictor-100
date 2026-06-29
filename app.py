@@ -1,34 +1,23 @@
 import streamlit as st
 import pandas as pd
-import requests
-import json
-import io
 from modules import summary, search
 
-# 구글 드라이브 파일 ID (기존 ID 유지)
-FILE_IDS = {
-    "batters": "1UAgU7QH65LOqAaicg-Snrn26wfniDOWT",
-    "pitchers": "1jNHpBgB_NXuI5Aedw5j0qG05u9eSFyHT",
-    "full_data": "1vj_n2MOPjAQ50U4N5KAxKxwuoL3UCaI4",
-    "schedule": "1jNvhwD_1nQhW9pnyVodutjtZfY03b4-Q"
+# 웹에 게시된 CSV 링크를 여기에 넣으세요
+CSV_URLS = {
+    "batters": "여기에_배터_CSV_링크_붙여넣기",
+    "pitchers": "여기에_투수_CSV_링크_붙여넣기",
+    "full_data": "여기에_풀데이터_CSV_링크_붙여넣기",
+    "schedule": "여기에_일정_CSV_링크_붙여넣기"
 }
 
 @st.cache_data
 def load_all_data():
     data = {}
     errors = []
-    for key, file_id in FILE_IDS.items():
+    for key, url in CSV_URLS.items():
         try:
-            # 핵심: 구글 드라이브 API를 통한 직접 파일 스트림 접근
-            url = f"https://docs.google.com/uc?export=download&id={file_id}"
-            response = requests.get(url)
-            response.raise_for_status() # 오류 발생 시 즉시 감지
-            
-            # JSONL(줄바꿈 구분 JSON) 형식으로 읽기 시도
-            lines = response.text.strip().split('\n')
-            data_list = [json.loads(line) for line in lines if line.strip()]
-            data[key] = pd.json_normalize(data_list)
-            
+            # CSV를 직접 읽습니다. 
+            data[key] = pd.read_csv(url)
         except Exception as e:
             errors.append(f"로딩 실패 ({key}): {str(e)}")
     return data, errors
@@ -44,7 +33,6 @@ def main():
         
     st.sidebar.title("메뉴")
     menu = st.sidebar.radio("분석 선택", ["데이터 요약", "선수 검색"])
-    
     if menu == "데이터 요약": summary.show(data)
     elif menu == "선수 검색": search.show(data)
 
