@@ -3,7 +3,6 @@ import pandas as pd
 import os
 import zipfile
 
-# 기존 모듈 및 신규 모듈 import
 from modules.registry import create_main_registry
 from modules.features import add_rolling_features
 from modules.weather_processor import process_weather_features
@@ -15,6 +14,7 @@ from modules.schedule_engine import add_schedule_features
 from modules.rivalry import add_rivalry_features
 from modules.sabermetrics import add_defensive_efficiency, add_catcher_impact_features
 from modules.manager_tendency import add_manager_tendency_features
+from modules.lineup_engine import add_lineup_stability_features
 
 @st.cache_data
 def load_data():
@@ -28,15 +28,21 @@ def load_data():
             df = pd.read_csv(f)
     
     df.columns = [c.lower().strip() for c in df.columns]
+    if 'home_score' in df.columns and 'away_score' in df.columns:
+        df['is_home_win'] = (df['home_score'] > df['away_score']).astype(int)
     
-    # 피처 엔지니어링 파이프라인
+    # 순차적 피처 엔지니어링 파이프라인
     df = process_weather_features(df)
     df = calculate_bullpen_fatigue(df)
     df = apply_platoon_weights(df)
     
-    # [추가] 작전 성향 지표 및 기존 지표 통합
+    # [통합] 부상/라인업 변수 및 작전 성향 통합
     df = add_manager_tendency_features(df)
+    df = add_lineup_stability_features(df)
+    df = add_defensive_efficiency(df)
+    df = add_catcher_impact_features(df)
     
+    # 최종 레지스트리 병합
     registry = create_main_registry(df)
     game_metrics = calculate_game_metrics(df)
     registry = registry.merge(game_metrics, on='game_pk', how='left').fillna(0)
