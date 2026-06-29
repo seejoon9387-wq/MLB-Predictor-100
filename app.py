@@ -1,30 +1,46 @@
 import streamlit as st
-import statsapi 
+import sys
+import os
+
+# 모듈 경로 추가
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# 예외 처리를 강화하여 라이브러리가 없어도 일단 앱이 뜨게 함
+try:
+    import statsapi
+    STATSAPI_AVAILABLE = True
+except ImportError:
+    STATSAPI_AVAILABLE = False
+
 from modules.ui_manager import UIManager
 
-@st.cache_data(ttl=60)
-def fetch_mlb_live_data():
-    try:
-        # 데이터가 잘 들어오는지 확인하기 위해 시도
-        schedule = statsapi.schedule(date='2026-06-30')
-        
-        # 만약 데이터가 비어있다면, 현재 날짜에 경기가 없다는 뜻입니다.
-        if not schedule:
+def fetch_mlb_data():
+    if STATSAPI_AVAILABLE:
+        try:
+            schedule = statsapi.schedule(date='2026-06-30')
+            return schedule if schedule else []
+        except:
             return []
-            
-        games = []
-        for game in schedule:
-            games.append({
-                'match_time': game.get('game_time', 'N/A'), 
-                'away_name': game.get('away_name', 'TBA'),
-                'away_score': game.get('away_score', 0),
-                'home_name': game.get('home_name', 'TBA'),
-                'home_score': game.get('home_score', 0)
-            })
-        return games
-    except Exception as e:
-        # 여기에 어떤 에러가 났는지 출력하게 합니다.
-        st.error(f"상세 에러 내용: {e}")
-        return []
+    else:
+        # 라이브러리가 없을 때 테스트 데이터 반환
+        return [{'game_time': '07:15', 'away_name': 'HOU', 'away_score': 7, 'home_name': 'DET', 'home_score': 5}]
 
-# (이하 main 함수 동일)
+def main():
+    st.set_page_config(layout="wide")
+    st.title("⚾ 2026년 6월 30일 MLB 실시간 경기")
+    
+    if not STATSAPI_AVAILABLE:
+        st.warning("경고: 'mlb-statsapi' 라이브러리가 설치되지 않았습니다. requirements.txt를 확인하세요.")
+
+    if st.button("🔄 데이터 새로고침"):
+        st.rerun()
+        
+    games = fetch_mlb_data()
+    
+    if games:
+        UIManager.render_game_navbar(games)
+    else:
+        st.info("데이터가 없습니다. 날짜를 확인하거나 API 상태를 점검해주세요.")
+
+if __name__ == "__main__":
+    main()
