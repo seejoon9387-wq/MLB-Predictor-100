@@ -24,27 +24,31 @@ def main():
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
-    # 상단 제어 버튼
-    col1, _, col2 = st.columns([1, 8, 1])
+    # 1. 상단 제어 영역 (버튼 배치 고정)
+    col1, col2, col3 = st.columns([2, 6, 2])
+    
     with col1:
-        if st.button("🔄 새로고침"):
+        if st.button("🔄 실시간 업데이트"):
             st.session_state.games = fetch_data()
             st.rerun()
-    with col2:
-        c_p, c_n = st.columns(2)
-        with c_p:
+            
+    with col3:
+        n1, n2 = st.columns(2)
+        with n1:
             if st.button("◀"):
                 if st.session_state.current_page > 0: st.session_state.current_page -= 1
-        with c_n:
+        with n2:
             if st.button("▶"): st.session_state.current_page += 1
 
-    # 클릭 이벤트 처리
+    # 2. 카드 영역
     def handle_click(game):
-        st.session_state.selected_game = game
-        st.session_state.details = statsapi.game_data(game['id'])
+        with st.spinner('정보 로딩 중...'):
+            st.session_state.selected_game = game
+            st.session_state.details = statsapi.game_data(game['id'])
 
     UIManager.render_game_navbar(st.session_state.games, handle_click)
 
+    # 3. 상세 정보 영역
     if 'selected_game' in st.session_state and 'details' in st.session_state:
         g = st.session_state.selected_game
         st.divider()
