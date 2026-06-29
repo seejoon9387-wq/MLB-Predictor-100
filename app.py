@@ -21,42 +21,31 @@ def main():
     st.set_page_config(layout="wide")
     st.title("⚾ MLB 실시간 경기")
     
-    # 화살표 버튼을 크게 만들기 위한 CSS
-    st.markdown("""
-        <style>
-            .arrow-btn button { font-size: 30px !important; height: 180px !important; }
-        </style>
-    """, unsafe_allow_html=True)
-
     if 'games' not in st.session_state: st.session_state.games = fetch_data()
     if 'current_page' not in st.session_state: st.session_state.current_page = 0
 
+    # 상단 컨트롤
     if st.button("🔄 실시간 업데이트"):
         st.session_state.games = fetch_data()
         st.rerun()
 
-    # 화살표(좌) + 카드영역 + 화살표(우)
-    main_cols = st.columns([1, 12, 1])
+    # 화살표(좌) + 카드 영역 + 화살표(우)
+    main_cols = st.columns([1, 10, 1])
     
     with main_cols[0]:
-        st.markdown('<div class="arrow-btn">', unsafe_allow_html=True)
-        if st.button("◀"):
+        st.write("\n\n\n")
+        if st.button("◀ 이전"):
             if st.session_state.current_page > 0: st.session_state.current_page -= 1
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
             
     with main_cols[1]:
-        def handle_click(game):
-            st.session_state.selected_game = game
-            st.session_state.details = statsapi.game_data(game['id'])
-        UIManager.render_game_navbar(st.session_state.games, handle_click)
+        UIManager.render_game_navbar(st.session_state.games, lambda g: st.session_state.update(selected_game=g, details=statsapi.game_data(g['id'])))
 
     with main_cols[2]:
-        st.markdown('<div class="arrow-btn">', unsafe_allow_html=True)
-        if st.button("▶"):
+        st.write("\n\n\n")
+        if st.button("다음 ▶"):
             st.session_state.current_page += 1
             st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     if 'selected_game' in st.session_state and 'details' in st.session_state:
         g = st.session_state.selected_game
