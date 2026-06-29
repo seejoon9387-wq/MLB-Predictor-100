@@ -4,13 +4,11 @@ class UIManager:
     @staticmethod
     def render_game_list(game_data_list, on_card_click):
         st.write("### 오늘의 경기 목록")
-        # 리스트 형태로 단순 출력
         for i, game in enumerate(game_data_list):
-            # 경기 정보를 텍스트로 명확히 표시
-            st.write(f"경기: {game.get('away_name')} vs {game.get('home_name')}")
-            st.write(f"점수: {game.get('away_score')} : {game.get('home_score')}")
+            # 변환된 한국 시간과 팀 정보를 표시
+            time_str = f"{game.get('display_date', '')} {game.get('display_time', '')}"
             
-            # 상세보기 버튼
-            if st.button(f"상세 정보 보기 ({i})", key=f"btn_{i}"):
+            st.info(f"[{time_str}] {game.get('away_name', 'AWY')} vs {game.get('home_name', 'HOM')} | {game.get('away_score', 0)} - {game.get('home_score', 0)}")
+            
+            if st.button(f"경기 상세 보기 ({i+1})", key=f"btn_{i}"):
                 on_card_click(game)
-            st.divider()
