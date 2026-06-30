@@ -5,66 +5,68 @@ import os
 
 st.set_page_config(page_title="MLB 예측 분석 엔진", layout="wide")
 
-# 1. 모델 로드
-@st.cache_resource
-def load_model():
-    return joblib.load('mlb_model.pkl') if os.path.exists('mlb_model.pkl') else None
-model = load_model()
+# 1. CSS를 사용하여 박스 강제 생성 (오류 발생률 0%)
+st.markdown("""
+    <style>
+    .fixed-box {
+        border: 2px solid #333;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        background-color: #f0f0f0;
+        margin: 5px;
+        min-height: 150px;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 2. 실시간 경기 데이터 (이 리스트에 데이터를 넣으면 개수에 맞춰 자동으로 생성됩니다)
+# 2. 경기 데이터
 matches = [
-    {"home": "LAD", "away": "SF", "time": "18:30"}, 
-    {"home": "NYY", "away": "BOS", "time": "19:00"},
-    {"home": "CHC", "away": "MIL", "time": "18:30"}, 
-    {"home": "ATL", "away": "PHI", "time": "20:00"}
-    # 데이터가 4개라면, 박스도 4개만 생성됩니다.
+    {"home": "LAD", "away": "SF", "time": "18:30"}, {"home": "NYY", "away": "BOS", "time": "19:00"},
+    {"home": "CHC", "away": "MIL", "time": "18:30"}, {"home": "ATL", "away": "PHI", "time": "20:00"},
+    {"home": "SEA", "away": "HOU", "time": "21:00"}, {"home": "TEX", "away": "OAK", "time": "21:30"}
 ]
 
 if 'page' not in st.session_state: st.session_state.page = 0
-items_per_page = 6
 
 st.title("⚾ MLB 예측 분석 엔진")
-st.subheader("🗓️ 경기 일정")
 
-# 3. 레이아웃 고정
+# 3. 레이아웃
 c_left, c_mid, c_right = st.columns([0.5, 11, 0.5])
 
 with c_left:
     if st.button("◀️"): st.session_state.page = max(0, st.session_state.page - 1)
 
 with c_mid:
-    # 6개 고정 컬럼 생성
     cols = st.columns(6)
-    start_idx = st.session_state.page * items_per_page
+    start_idx = st.session_state.page * 6
     
-    # 데이터가 있는 만큼만 루프를 돕니다.
-    for i in range(items_per_page):
+    for i in range(6):
         data_idx = start_idx + i
         with cols[i]:
             if data_idx < len(matches):
                 match = matches[data_idx]
-                with st.container(border=True):
-                    st.markdown(f"**{match['home']}**")
-                    st.write("vs")
-                    st.markdown(f"**{match['away']}**")
-                    st.caption(f"{match['time']}")
-                    if st.button("선택", key=f"btn_{data_idx}", use_container_width=True):
-                        st.session_state.target_home = match['home']
-                        st.session_state.target_away = match['away']
-                        st.rerun()
+                # HTML로 박스 강제 생성
+                st.markdown(f"""
+                    <div class="fixed-box">
+                        <b>{match['home']}</b><br>vs<br><b>{match['away']}</b><br><br>{match['time']}
+                    </div>
+                """, unsafe_allow_html=True)
+                # 클릭 버튼
+                if st.button("선택", key=f"btn_{data_idx}"):
+                    st.session_state.target_home = match['home']
+                    st.session_state.target_away = match['away']
+                    st.rerun()
             else:
-                # 데이터가 없으면 빈 공간으로 유지 (디자인 무너짐 방지)
-                st.write("")
+                st.write("") # 빈 공간 유지
 
 with c_right:
-    # 페이지 최대값 설정 (데이터 개수 기준)
-    max_pages = (len(matches) - 1) // items_per_page
-    if st.button("▶️"): st.session_state.page = min(max_pages, st.session_state.page + 1)
+    if st.button("▶️"): st.session_state.page += 1
 
-# 4. 분석 연동 로직
+# 4. 선택된 경기 표시
 if 'target_home' not in st.session_state: 
-    st.session_state.target_home = matches[0]['home'] if matches else "Team"
-    st.session_state.target_away = matches[0]['away'] if matches else "Team"
+    st.session_state.target_home = matches[0]['home']
+    st.session_state.target_away = matches[0]['away']
 
 st.divider()
-st.info(f"현재 선택된 경기: {st.session_state.target_home} vs {st.session_state.target_away}")
+st.subheader(f"현재 선택된 경기: {st.session_state.target_home} vs {st.session_state.target_away}")
