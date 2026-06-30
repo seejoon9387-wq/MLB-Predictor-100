@@ -1,25 +1,29 @@
-# [파일: main.py]
-import pandas as pd
-from config import SCHEMA
-from engine import MatchAnalysisEngine
+# [파일: main.py] - 시스템의 통합 관리자
+from registry import EngineRegistry
+from logger import SystemLogger
 
-def run_match_briefing(match_data, historical_data, historical_target):
-    engine = MatchAnalysisEngine(SCHEMA)
-    clean_hist = engine.clean(historical_data)
-    engine.train(clean_hist, historical_target)
+def run_analysis_pipeline(game_id):
+    # 1. 시스템 초기화 및 로깅 시작
+    logger = SystemLogger(game_id)
+    registry = EngineRegistry()
     
-    brief = engine.get_analysis_brief(match_data)
-    
-    print("--- 📋 최종 경기 예측 상세 브리핑 ---")
-    print(f"예측 결과 값: {brief['predicted_score']:.2f} ({brief['confidence']})")
-    print(f"참고: 과거 인덱스 {brief['similar_match_idx']}번 경기 패턴과 유사함.")
-    print("분석 결과 시각화가 완료되었습니다. (report_날짜.png 참조)")
-    print("분석 이력이 analysis_log.txt에 기록되었습니다.")
-    print("------------------------------------")
-
-if __name__ == "__main__":
-    hist_data = pd.DataFrame({'feature1': [10, 50, 80], 'feature2': [0.1, 0.5, 0.9]})
-    hist_target = [0, 1, 1]
-    current_match = pd.DataFrame({'feature1': [75], 'feature2': [0.8]})
-    
-    run_match_briefing(current_match, hist_data, hist_target)
+    try:
+        # 2. 데이터 흐름 제어 (Pipeline Flow)
+        raw_data = registry.get_module('data_loader').load(game_id)
+        clean_data = registry.get_module('processor').execute(raw_data)
+        
+        # 3. 인텔리전스 레이어 (도메인 엔진들 통합 분석)
+        engine_results = registry.run_all_domain_engines(clean_data)
+        
+        # 4. 확률 업데이트 및 최종 최적화
+        prediction = registry.get_module('bayesian_updater').process(engine_results)
+        
+        # 5. 브리핑 및 아카이브
+        brief = registry.get_module('briefing_engine').generate(prediction)
+        registry.get_module('archiver').save(game_id, brief)
+        
+        return brief
+        
+    except Exception as e:
+        logger.log_error(e)
+        raise
