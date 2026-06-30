@@ -1,11 +1,12 @@
 # [파일: engine.py]
 import numpy as np
 import pandas as pd
+from scipy.stats import ks_2samp
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import mean_squared_error
 
-# 모듈 1: 결정론적 데이터 품질 관리
+# 모듈 1: 데이터 품질 관리
 class DataQualityManager:
     def __init__(self, schema):
         self.schema = schema
@@ -18,7 +19,19 @@ class DataQualityManager:
             df.loc[outliers, col] = bounds['median']
         return df
 
-# 모듈 2: 확률적 예측 모델
+# 모듈 2: 드리프트 감지 모듈 (추가됨)
+class DriftDetector:
+    def __init__(self, threshold=0.05):
+        self.threshold = threshold
+    def detect(self, reference_data, current_data):
+        # K-S 검정을 통해 두 데이터의 분포 차이 계산
+        drift_report = {}
+        for col in reference_data.columns:
+            stat, p_value = ks_2samp(reference_data[col], current_data[col])
+            drift_report[col] = p_value < self.threshold
+        return drift_report
+
+# 모듈 3: 확률적 모델
 class ProbabilisticModel:
     def __init__(self):
         self.models = {
@@ -32,16 +45,14 @@ class ProbabilisticModel:
     def predict(self, X):
         return {name: model.predict(X) for name, model in self.models.items()}
 
-# 모듈 3: 평가 모듈 (추가됨)
+# 모듈 4: 평가 모듈
 class PerformanceEvaluator:
     @staticmethod
     def evaluate(y_true, y_pred):
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-        # 예측값과 실제값의 차이 분포를 통한 단순 신뢰도 지표 계산
-        calibration_score = np.mean(np.abs(np.array(y_true) - np.array(y_pred)))
-        return {"RMSE": rmse, "Calibration_Error": calibration_score}
+        return {"RMSE": rmse}
 
-# 모듈 4: 확장 윈도우 백테스팅 엔진
+# 모듈 5: 백테스팅 엔진
 class Backtester:
     def __init__(self, model_class):
         self.model_class = model_class
