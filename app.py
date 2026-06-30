@@ -1,3 +1,13 @@
+import sys
+import os
+
+# 현재 app.py가 있는 폴더를 시스템 경로에 강제로 추가
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+import streamlit as st
+from engine import SabermetricsEngine  # 이제 이 코드가 작동할 것입니다.
+from modules.data_manager import DataManager
+
 import streamlit as st
 from engine import SabermetricsEngine
 from modules.data_manager import DataManager
