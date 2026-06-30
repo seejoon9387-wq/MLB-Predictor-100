@@ -1,61 +1,69 @@
 import streamlit as st
-import pandas as pd
 import joblib
+import pandas as pd
 import os
 
-# 페이지 설정
-st.set_page_config(page_title="MLB 분석 엔진", layout="wide")
+# 1. 페이지 설정
+st.set_page_config(page_title="MLB 예측 엔진", layout="centered")
+st.title("🛡️ MLB 정밀 예측 분석 엔진")
+st.subheader("모델 버전: v2.4.1 (모델 단독 운용 모드)")
 
-st.title("🛡️ MLB 예측 엔진 통합 관리 시스템")
-
-# 1. 모델 및 데이터 로드 함수
+# 2. 모델 로드 (파일이 없으면 바로 알려줌)
 @st.cache_resource
 def load_model():
-    return joblib.load('mlb_model.pkl')
-
-@st.cache_data
-def load_data():
-    # 깃허브에는 전체 데이터(1.4GB)를 올리지 말고, 
-    # 분석용으로 가공된 작은 샘플 데이터를 활용하세요.
-    return pd.read_csv("mlb_master_final.csv")
-
-# 모델 초기화
-try:
-    model = load_model()
-    st.sidebar.success("모델 로드 성공: v2.4.1")
-except:
-    st.sidebar.error("모델 파일을 찾을 수 없습니다.")
-
-# 2. 메인 로직
-st.write("---")
-# 경기 날짜 선택
-selected_date = st.date_input("🗓️ 분석할 경기 날짜를 선택하세요")
-
-# 데이터 처리
-if os.path.exists("mlb_master_final.csv"):
-    df = load_data()
-    # 날짜 필터링
-    df['game_date'] = pd.to_datetime(df['game_date'])
-    filtered_df = df[df['game_date'].dt.date == selected_date]
-
-    if not filtered_df.empty:
-        st.write(f"🔍 {selected_date} 경기 목록")
-        game_list = filtered_df['game_pk'].unique()
-        selected_game = st.selectbox("분석할 경기 선택", game_list)
-        
-        # 분석 버튼
-        if st.button("🚀 분석 실행"):
-            # 분석용 피처 선택
-            features = ['launch_angle', 'bat_speed', 'release_speed', 'plate_x', 'plate_z', 'spin_axis']
-            data_to_predict = filtered_df[filtered_df['game_pk'] == selected_game][features].fillna(0)
-            
-            # 예측 실행
-            prob = model.predict_proba(data_to_predict.iloc[0:1])[0][1]
-            
-            # 결과 출력
-            st.metric(label="안타 확률", value=f"{prob*100:.2f}%")
-            st.progress(float(prob))
+    if os.path.exists('mlb_model.pkl'):
+        return joblib.load('mlb_model.pkl')
     else:
-        st.warning("해당 날짜에 분석 가능한 데이터가 없습니다.")
+        return None
+
+model = load_model()
+
+# 3. 메인 인터페이스
+if model is None:
+    st.error("⚠️ 모델 파일('mlb_model.pkl')을 찾을 수 없습니다. 깃허브 폴더를 확인하세요.")
 else:
-    st.error("데이터 파일(mlb_master_final.csv)이 업로드되지 않았습니다.")
+    st.success("✅ 엔진 가동 중: 실시간 분석 가능")
+    
+    with st.form("input_form"):
+        st.write("### ⚾ 타구 및 투구 데이터 입력")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            launch_angle = st.number_input("발사 각도 (Launch Angle)", value=15.0)
+            bat_speed = st.number_input("타구 속도 (Bat Speed)", value=70.0)
+            release_speed = st.number_input("투구 속도 (Release Speed)", value=90.0)
+        
+        with col2:
+            plate_x = st.number_input("투구 위치 X (Plate X)", value=0.0)
+            plate_z = st.number_input("투구 위치 Z (Plate Z)", value=1.5)
+            spin_axis = st.number_input("회전 축 (Spin Axis)", value=200.0)
+            
+        submitted = st.form_submit_button("🚀 안타 확률 분석 실행")
+
+    # 4. 분석 로직
+    if submitted:
+        input_df = pd.DataFrame([[launch_angle, bat_speed, release_speed, plate_x, plate_z, spin_axis]], 
+                                columns=['launch_angle', 'bat_speed', 'release_speed', 'plate_x', 'plate_z', 'spin_axis'])
+        
+        # 확률 계산
+        prob = model.predict_proba(input_df)[0][1]
+        
+        # 결과 표시
+        st.write("---")
+        st.subheader("🎯 분석 결과")
+        st.metric(label="예상 안타 확률", value=f"{prob*100:.2f}%")
+        
+        # 시각화 효과
+        st.progress(float(prob))
+        
+        if prob > 0.4:
+            st.balloons()
+            st.write("🔥 **강력한 안타성 타구입니다!**")
+        elif prob > 0.2:
+            st.write("🧐 **평범한 타구로 예상됩니다.**")
+        else:
+            st.write("📉 **범타 가능성이 높습니다.**")
+
+# 시스템 상태 하단 바
+st.write("---")
+st.caption("시스템 상태: 정상 | 데이터 엔진: 모델 전용 모드")
