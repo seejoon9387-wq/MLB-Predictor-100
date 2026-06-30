@@ -1,42 +1,29 @@
 import pandas as pd
 import os
+from modules.config import SCHEMA, DB_DIR
 
 class DataManager:
-    # 경로를 하드코딩하지 않고 관리하기 위해 config를 나중에 연동할 예정입니다.
-    GAME_DB = "data/mlb_games.csv"
-    PLAYER_DB = "data/mlb_players.csv"
+    GAME_DB = os.path.join(DB_DIR, "mlb_games.csv")
+    PLAYER_DB = os.path.join(DB_DIR, "mlb_players.csv")
 
     @staticmethod
-    def load_latest_stats():
-        """분석에 필요한 전체 데이터를 로드하고 검증합니다."""
-        if not os.path.exists(DataManager.PLAYER_DB):
-            return pd.DataFrame()
-        
-        df = pd.read_csv(DataManager.PLAYER_DB)
-        # 데이터 정제: 결측치 처리 및 분석 필수 컬럼 존재 확인
-        df = df.fillna(0) 
+    def validate_data(df):
+        """데이터 품질을 SCHEMA 기준으로 검증"""
+        for col, rules in SCHEMA.items():
+            if col in df.columns:
+                # 범위 밖의 데이터는 중앙값(median)으로 보정
+                df[col] = df[col].clip(lower=rules['min'], upper=rules['max'])
         return df
 
     @staticmethod
-    def get_player_data(player_name):
-        """특정 선수의 데이터만 추출 (엔진 호출용)"""
-        df = DataManager.load_latest_stats()
-        if player_name in df['player_name'].values:
-            return df[df['player_name'] == player_name].iloc[0].to_dict()
-        return None
+    def load_latest_stats():
+        if not os.path.exists(DataManager.PLAYER_DB):
+            return pd.DataFrame()
+        df = pd.read_csv(DataManager.PLAYER_DB)
+        return DataManager.validate_data(df)
 
     @staticmethod
     def save_game(game_data):
-        """경기 결과 저장"""
         df = pd.DataFrame([game_data])
-        # 폴더가 없으면 자동 생성
-        os.makedirs(os.path.dirname(DataManager.GAME_DB), exist_ok=True)
+        os.makedirs(DB_DIR, exist_ok=True)
         df.to_csv(DataManager.GAME_DB, mode='a', header=not os.path.exists(DataManager.GAME_DB), index=False)
-
-    @staticmethod
-    def save_player_stats(player_list):
-        """통계 업데이트"""
-        if not player_list: return
-        df = pd.DataFrame(player_list)
-        os.makedirs(os.path.dirname(DataManager.PLAYER_DB), exist_ok=True)
-        df.to_csv(DataManager.PLAYER_DB, mode='a', header=not os.path.exists(DataManager.PLAYER_DB), index=False)
