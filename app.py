@@ -13,51 +13,61 @@ def load_model():
 
 model = load_model()
 
-# 2. 유동적인 경기 데이터 (리스트 길이에 상관없이 작동)
-# 예시: 오늘 경기가 2개일 때도, 15개일 때도 아래 코드 하나로 해결됩니다.
+# 2. 경기 데이터 (예시: 12개 경기 데이터)
 matches = [
-    {"home": "LAD", "away": "SF", "time": "18:30"},
-    {"home": "NYY", "away": "BOS", "time": "19:00"}
-    # 여기에 데이터가 100개가 추가되어도 코드는 수정할 필요가 없습니다.
+    {"home": "LAD", "away": "SF", "time": "18:30"}, {"home": "NYY", "away": "BOS", "time": "19:00"},
+    {"home": "CHC", "away": "MIL", "time": "18:30"}, {"home": "ATL", "away": "PHI", "time": "20:00"},
+    {"home": "SEA", "away": "HOU", "time": "21:00"}, {"home": "TEX", "away": "OAK", "time": "21:30"},
+    {"home": "BAL", "away": "TOR", "time": "18:00"}, {"home": "CLE", "away": "DET", "time": "18:30"},
+    {"home": "MIN", "away": "CWS", "time": "19:00"}, {"home": "KC", "away": "LAA", "time": "19:30"},
+    {"home": "NYM", "away": "MIA", "time": "20:00"}, {"home": "WSH", "away": "PIT", "time": "20:30"}
 ]
 
+# 페이지 상태 관리
+if 'page' not in st.session_state: st.session_state.page = 0
+items_per_page = 6
+max_pages = (len(matches) - 1) // items_per_page
+
 st.title("⚾ MLB 예측 분석 엔진")
+st.subheader("🗓️ 경기 일정 (화살표로 페이지 이동)")
 
-# 3. 경기 수에 따라 가변적으로 변하는 Expander UI
-with st.expander(f"🗓️ 오늘 진행되는 경기 일정 ({len(matches)}경기)", expanded=True):
-    for i, match in enumerate(matches):
-        # 각 경기를 클릭 가능한 버튼 형태로 배치
-        if st.button(f"{match['time']} | {match['home']} vs {match['away']}", key=f"match_{i}"):
-            st.session_state.target_home = match['home']
-            st.session_state.target_away = match['away']
-            st.rerun()
+# 3. 레이아웃 고정 및 데이터 렌더링
+c_left, c_mid, c_right = st.columns([1, 10, 1])
 
-# 4. 분석할 경기 정보 (선택된 데이터 반영)
+with c_left:
+    if st.button("◀️ 이전"): st.session_state.page = max(0, st.session_state.page - 1)
+
+with c_mid:
+    # 6개 경기씩 슬라이싱
+    start_idx = st.session_state.page * items_per_page
+    current_view = matches[start_idx : start_idx + items_per_page]
+    
+    # 2행 3열 배치를 위한 이중 루프
+    for row in range(0, len(current_view), 3):
+        cols = st.columns(3)
+        for i, col in enumerate(cols):
+            idx = row + i
+            if idx < len(current_view):
+                m = current_view[idx]
+                # 버튼을 클릭하면 세션 데이터 업데이트
+                if col.button(f"{m['home']} vs {m['away']}\n({m['time']})", key=f"match_{start_idx + idx}"):
+                    st.session_state.target_home = m['home']
+                    st.session_state.target_away = m['away']
+                    st.rerun()
+
+with c_right:
+    if st.button("다음 ▶️"): st.session_state.page = min(max_pages, st.session_state.page + 1)
+
+# 4. 분석 실행 영역
+st.divider()
 if 'target_home' not in st.session_state: st.session_state.target_home = matches[0]['home']
 if 'target_away' not in st.session_state: st.session_state.target_away = matches[0]['away']
 
-st.subheader(f"✅ 선택된 경기: {st.session_state.target_home} vs {st.session_state.target_away}")
-
-# 5. 분석 로직 (기존과 동일)
-st.sidebar.header("📊 데이터 입력")
+st.sidebar.header("📊 분석 데이터")
 home = st.sidebar.text_input("홈 팀", value=st.session_state.target_home)
 away = st.sidebar.text_input("원정 팀", value=st.session_state.target_away)
-la = st.sidebar.number_input("Launch Angle", value=15.0)
-bs = st.sidebar.number_input("Bat Speed", value=70.0)
-rs = st.sidebar.number_input("Release Speed", value=90.0)
-hs = st.sidebar.number_input("Hyper Speed", value=100.0)
-re = st.sidebar.number_input("Release Extension", value=6.0)
+
+# (나머지 입력 필드들...)
 
 if st.button("🚀 결과 분석 실행", type="primary"):
-    if model:
-        input_data = pd.DataFrame([[la, bs, rs, hs, re]], columns=['launch_angle', 'bat_speed', 'release_speed', 'hyper_speed', 'release_extension'])
-        proba = model.predict_proba(input_data)[0][1]
-        
-        st.subheader(f"결과: {home} vs {away}")
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number", value=proba * 100, title={'text': "안타 확률 (%)"},
-            gauge={'axis': {'range': [0, 100]}}
-        ))
-        st.plotly_chart(fig)
-    else:
-        st.error("모델 파일(mlb_model.pkl)을 찾을 수 없습니다.")
+    st.write(f"분석 시작: {home} vs {away}")
