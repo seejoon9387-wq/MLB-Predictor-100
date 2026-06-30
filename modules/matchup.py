@@ -1,25 +1,14 @@
 import pandas as pd
 
-def add_matchup_stats(df):
+def get_team_matchup_adjustment(lineup_data, pitcher_data):
     """
-    투수-타자 상성 지표 생성:
-    - 동일 투수 vs 동일 타자의 과거 기록을 바탕으로 평균 출루율과 장타력을 계산
+    오늘의 라인업과 상대 투수 정보를 받아 팀 단위 상성 보정치를 반환
     """
-    # 투수-타자 페어별 그룹화
-    matchup_df = df.groupby(['pitcher', 'batter']).agg({
-        'woba_value': 'mean',          # 해당 투수 상대 타자의 평균 WOBA
-        'launch_speed': 'mean',       # 해당 투수 상대 타자의 평균 타구 속도
-        'at_bat_number': 'count'      # 총 대결 횟수 (샘플 사이즈)
-    }).rename(columns={
-        'woba_value': 'vs_pitcher_woba',
-        'launch_speed': 'vs_pitcher_exit_velo',
-        'at_bat_number': 'matchup_count'
-    })
+    # 1. 라인업 각 타자의 vs_pitcher_woba를 평균
+    # 2. 이 값이 리그 평균보다 높으면 승리 확률 + 가중치
+    avg_woba = lineup_data['vs_pitcher_woba'].mean()
+    league_avg_woba = 0.320 # 기준값
     
-    # 원본 데이터프레임에 상성 지표 병합
-    df = df.merge(matchup_df, on=['pitcher', 'batter'], how='left')
-    
-    # 대결 횟수가 너무 적으면 데이터 신뢰도가 낮으므로 결측치 처리
-    df['vs_pitcher_woba'] = df['vs_pitcher_woba'].fillna(df['woba_value'].mean())
-    
-    return df
+    # 상성 보정치 계산: 평균 woba가 높으면 승률 긍정 보정
+    adjustment = (avg_woba - league_avg_woba) * 2
+    return adjustment
