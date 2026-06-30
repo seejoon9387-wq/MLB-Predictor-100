@@ -1,31 +1,17 @@
-import pandas as pd
+# modules/matchup.py
 
-def add_matchup_stats(df):
-    """투수-타자 상성 지표 생성 (원본 데이터 가공용)"""
-    matchup_df = df.groupby(['pitcher', 'batter']).agg({
-        'woba_value': 'mean',
-        'launch_speed': 'mean',
-        'at_bat_number': 'count'
-    }).rename(columns={
-        'woba_value': 'vs_pitcher_woba',
-        'launch_speed': 'vs_pitcher_exit_velo',
-        'at_bat_number': 'matchup_count'
-    })
-    
-    df = df.merge(matchup_df, on=['pitcher', 'batter'], how='left')
-    df['vs_pitcher_woba'] = df['vs_pitcher_woba'].fillna(0.320) # 리그 평균으로 대체
-    return df
+def get_platoon_advantage(pitcher_hand, batter_hand):
+    """좌우 상성(Platoon) 가중치 산출"""
+    # 같은 손이면 투수 우위, 다르면 타자 우위 가정 (데이터로 정교화 필요)
+    if pitcher_hand == batter_hand:
+        return 0.95  # 투수 우위
+    return 1.05      # 타자 우위
 
-def get_team_matchup_adjustment(lineup_df):
-    """
-    오늘의 라인업 df를 받아 팀 단위 상성 보정치를 반환
-    """
-    if lineup_df.empty:
-        return 0.0
-        
-    avg_woba = lineup_df['vs_pitcher_woba'].mean()
-    league_avg_woba = 0.320 
-    
-    # 상성 보정치 계산 (모델 예측값이 0~1 사이이므로 0.02 내외의 보정이 적절)
-    adjustment = (avg_woba - league_avg_woba) * 1.5 
-    return max(-0.05, min(0.05, adjustment)) # 과도한 보정 방지
+def calculate_lineup_synergy(batters_stats):
+    """라인업 시너지: 앞 타자의 출루율이 뒷 타자에게 미치는 영향"""
+    # 1번부터 9번 타자까지의 OBP(출루율)를 기반으로 시너지 지수 계산
+    synergy_score = 0
+    for i in range(1, len(batters_stats)):
+        # 앞 타자의 출루율이 높을수록 뒷 타자의 타점 기회 상승
+        synergy_score += (batters_stats[i-1]['obp'] * batters_stats[i]['woba'])
+    return synergy_score / len(batters_stats)
