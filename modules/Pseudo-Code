@@ -1,0 +1,16 @@
+def validate_data_quality(df, schema):
+    # 1. Schema Check
+    assert set(df.columns) == set(schema.keys()), "Schema Mismatch"
+    
+    # 2. Deterministic Anomaly Check
+    for column, bounds in schema.items():
+        if df[column].isnull().any():
+            raise ValueError(f"Missing values found in {column}")
+            
+        is_outlier = (df[column] < bounds['min']) | (df[column] > bounds['max'])
+        if is_outlier.any():
+            log_anomaly(df[is_outlier])
+            # 전략에 따라 드롭하거나 대체
+            df.loc[is_outlier, column] = bounds['median']
+            
+    return df
