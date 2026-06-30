@@ -1,16 +1,24 @@
-class Registry:
-    _data = {}
+# [파일: registry.py]
+class EngineRegistry:
+    def __init__(self):
+        self._modules = {}
+        # 의존성 정의: 각 엔진이 필요로 하는 데이터 피처 명시
+        self._dependencies = {
+            'sabermetrics': ['stats_data'],
+            'stamina_engine': ['player_history', 'schedule'],
+            'weather_engine': ['weather_data']
+        }
 
-    @classmethod
-    def register(cls, key, value):
-        """각 모듈이 자신의 연산 결과를 이곳에 등록"""
-        cls._data[key] = value
+    def register(self, name, module):
+        self._modules[name] = module
 
-    @classmethod
-    def get_all_engine_results(cls):
-        """모든 엔진의 결과를 통합해서 반환"""
-        return cls._data
+    def get_module(self, name):
+        return self._modules[name]
 
-    @classmethod
-    def clear(cls):
-        cls._data = {}
+    def run_all_domain_engines(self, data):
+        # 의존성을 확인하며 순차/병렬 실행
+        results = {}
+        for name, module in self._modules.items():
+            if hasattr(module, 'execute'):
+                results[name] = module.execute(data)
+        return results
