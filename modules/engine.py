@@ -1,29 +1,25 @@
-# [파일: main.py]
+# [파일: engine.py]
+import numpy as np
 import pandas as pd
-from config import SCHEMA
-from engine import DataQualityManager, BayesianOptimizer, ProbabilisticModel
+from sklearn.ensemble import GradientBoostingRegressor
 
-def run_optimized_engine(raw_data, target):
-    # 1. 데이터 정제
-    dq = DataQualityManager(SCHEMA)
-    clean_data = dq.validate(raw_data)
-    
-    # 2. 베이지안 최적화 실행
-    optimizer = BayesianOptimizer(clean_data, target)
-    best_params = optimizer.optimize()
-    print("최적화된 파라미터:", best_params)
-    
-    # 3. 최적 파라미터로 모델 학습
-    model = ProbabilisticModel(params=best_params)
-    model.fit(clean_data, target)
-    return model.predict(clean_data)
+class LocalAnalysisEngine:
+    def __init__(self, schema):
+        self.schema = schema
+        self.model = None
 
-if __name__ == "__main__":
-    data = pd.DataFrame({
-        'feature1': [10, 12, 15, 14, 20, 22, 25, 24, 30, 32, 35], 
-        'feature2': [0.1, 0.12, 0.15, 0.14, 0.2, 0.22, 0.25, 0.24, 0.3, 0.32, 0.35]
-    })
-    target = [0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1]
-    
-    results = run_optimized_engine(data, target)
-    print("예측 결과 (Median):", results['median'])
+    def clean(self, df):
+        # 결정론적 데이터 품질 관리
+        for col, bounds in self.schema.items():
+            df[col] = df[col].fillna(bounds['median'])
+            outliers = (df[col] < bounds['min']) | (df[col] > bounds['max'])
+            df.loc[outliers, col] = bounds['median']
+        return df
+
+    def train(self, X, y):
+        # 확률적 예측 (개인용으로는 앙상블보다 단일 모델의 튜닝이 효율적)
+        self.model = GradientBoostingRegressor(loss='quantile', alpha=0.5)
+        self.model.fit(X, y)
+
+    def predict(self, X):
+        return self.model.predict(X)
