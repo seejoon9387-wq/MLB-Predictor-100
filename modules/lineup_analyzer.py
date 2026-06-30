@@ -1,28 +1,27 @@
-# modules/lineup_analyzer.py
 import numpy as np
 
-def calculate_lineup_sensitivity(df, lineup_columns, key_players):
-    """
-    핵심 타자 결장 시 득점 변화 분석
-    - lineup_columns: 라인업에 포함된 타자 식별자 리스트
-    - key_players: 핵심 타자(시뮬레이션 대상) 리스트
-    """
+def calculate_lineup_sensitivity(df, key_players):
+    """핵심 타자 결장 시 득점 변화(drop_rate) 계산"""
     results = {}
-    
-    # 1. 베이스라인: 현재 득점 생산력(wOBA 등 활용)
     baseline_score = df['estimated_woba_using_speedangle'].mean()
     
     for player in key_players:
-        # 2. 핵심 타자 제외 시 데이터 필터링
         df_no_player = df[df['batter'] != player]
-        
-        # 3. 득점력 급락 정도 계산
         new_score = df_no_player['estimated_woba_using_speedangle'].mean()
         drop_rate = (baseline_score - new_score) / baseline_score
-        
         results[player] = drop_rate
-        
     return results
 
-def simulate_lineup_impact(df, drop_rate_map):
-    #
+def simulate_lineup_impact(current_lineup, drop_rate_map):
+    """
+    현재 출전 명단과 결장 선수 정보를 비교하여 최종 승률 보정치를 반환
+    - current_lineup: [선수1, 선수2, ...]
+    - drop_rate_map: {선수명: 결장 시 득점 하락폭}
+    """
+    total_adjustment = 0.0
+    for player in current_lineup:
+        # 만약 해당 선수가 결장자 명단에 있다면 하락폭만큼 승률에서 차감
+        if player in drop_rate_map:
+            total_adjustment -= drop_rate_map[player] * 0.1 # 보정 계수 적용
+            
+    return max(-0.05, min(0, total_adjustment)) # 보정치 제한
