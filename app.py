@@ -14,70 +14,71 @@ def load_model():
 
 model = load_model()
 
-# 2. 메인 UI 및 캐러셀
-st.title("⚾ MLB 예측 분석 엔진 v2.2")
-st.subheader("🗓️ 실시간 경기 일정")
-
-# 경기 데이터 (6개 팀 / 3경기)
-matches = [
-    {"home": "LAD", "away": "SF", "time": "18:30"},
-    {"home": "NYY", "away": "BOS", "time": "19:00"},
-    {"home": "CHC", "away": "MIL", "time": "18:30"},
-    {"home": "ATL", "away": "PHI", "time": "20:00"},
-    {"home": "SEA", "away": "HOU", "time": "21:00"},
-    {"home": "TEX", "away": "OAK", "time": "21:30"}
-]
-
-# 디자인을 위한 CSS 삽입 (음영과 테두리)
+# 2. 디자인을 위한 CSS 삽입 (음영과 테두리)
 st.markdown("""
     <style>
     .match-card {
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #ddd;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 4px 4px 15px rgba(0,0,0,0.1);
         text-align: center;
-        background-color: #f9f9f9;
-        margin-bottom: 10px;
+        background-color: #ffffff;
+        margin: 10px;
     }
+    .match-card b { font-size: 1.2em; }
     </style>
 """, unsafe_allow_html=True)
 
-# 페이지네이션 관리
+# 3. 메인 UI 및 경기 일정 캐러셀
+st.title("⚾ MLB 예측 분석 엔진 v2.2")
+st.subheader("🗓️ 실시간 경기 일정")
+
+# 경기 데이터 (12개 팀 / 6경기 예시)
+matches = [
+    {"home": "LAD", "away": "SF", "time": "18:30"}, {"home": "NYY", "away": "BOS", "time": "19:00"},
+    {"home": "CHC", "away": "MIL", "time": "18:30"}, {"home": "ATL", "away": "PHI", "time": "20:00"},
+    {"home": "SEA", "away": "HOU", "time": "21:00"}, {"home": "TEX", "away": "OAK", "time": "21:30"}
+]
+
+# 페이지네이션 (6개씩 처리)
 if 'page' not in st.session_state: st.session_state.page = 0
 
 col_left, col_mid, col_right = st.columns([1, 10, 1])
 
 with col_mid:
-    # 6개 팀을 3개씩 보여주기 (슬라이더)
-    current_matches = matches[st.session_state.page*3 : (st.session_state.page+1)*3]
+    # 6개 경기 추출
+    current_matches = matches[st.session_state.page*6 : (st.session_state.page+1)*6]
     
-    cols = st.columns(3)
-    for i, match in enumerate(current_matches):
-        with cols[i]:
-            st.markdown(f"""
-                <div class="match-card">
-                    <b>{match['home']} vs {match['away']}</b><br>
-                    <span>{match['time']}</span>
-                </div>
-            """, unsafe_allow_html=True)
+    # 2행 3열 배치를 위한 이중 루프
+    for row in range(0, len(current_matches), 3):
+        cols = st.columns(3)
+        for i, match in enumerate(current_matches[row:row+3]):
+            with cols[i]:
+                st.markdown(f"""
+                    <div class="match-card">
+                        <b>{match['home']} vs {match['away']}</b><br>
+                        <span>시작 시간: {match['time']}</span>
+                    </div>
+                """, unsafe_allow_html=True)
 
 with col_left:
     if st.button("◀️"): st.session_state.page = max(0, st.session_state.page - 1)
 with col_right:
-    if st.button("▶️"): st.session_state.page = min((len(matches)//3)-1, st.session_state.page + 1)
+    if st.button("▶️"): st.session_state.page = min((len(matches)//6), st.session_state.page + 1)
 
-# 3. 사이드바 입력 및 분석
-st.sidebar.header("📊 입력 컨트롤러")
+# 4. 사이드바: 입력 컨트롤러
+st.sidebar.header("📊 데이터 입력")
 home_team = st.sidebar.text_input("홈 팀", value="Home Team")
 away_team = st.sidebar.text_input("원정 팀", value="Away Team")
-
 launch_angle = st.sidebar.number_input("Launch Angle", value=15.0, step=0.1)
 bat_speed = st.sidebar.number_input("Bat Speed", value=70.0, step=0.1)
 release_speed = st.sidebar.number_input("Release Speed", value=90.0, step=0.1)
 hyper_speed = st.sidebar.number_input("Hyper Speed", value=100.0, step=0.1)
 release_extension = st.sidebar.number_input("Release Extension", value=6.0, step=0.1)
 
+# 5. 분석 실행
+st.divider()
 if st.button("🚀 결과 분석 실행", type="primary"):
     if not model:
         st.error("모델 파일을 찾을 수 없습니다.")
