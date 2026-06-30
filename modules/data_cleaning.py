@@ -2,48 +2,45 @@ import pandas as pd
 import numpy as np
 
 class DataCleaner:
-    def __init__(self, min_pa=5):
-        # min_pa: 통계적 유의성을 확보하기 위한 최소 타석 수 기준
-        self.min_pa = min_pa
+    def __init__(self, season_averages):
+        """
+        season_averages: 사전 계산된 선수별/리그별 평균 데이터프레임
+        """
+        self.season_averages = season_averages
 
-    def handle_outliers(self, df, feature='ops'):
+    def clean_data(self, df_snapshot):
         """
-        IQR(Interquartile Range) 방식을 사용하여 극단치를 제거합니다.
+        데이터 정제 및 결측치 발생 시 Fallback 로직 적용
         """
-        Q1 = df[feature].quantile(0.25)
-        Q3 = df[feature].quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
+        df_processed = df_snapshot.copy()
         
-        return df[(df[feature] >= lower_bound) & (df[feature] <= upper_bound)]
-
-    def clean_data(self, df, pa_col='pa'):
-        """
-        데이터 품질 정제 메인 프로세스
-        1. 최소 타석 미만 데이터 제외
-        2. 이상치 제거
-        """
-        # 1. 최소 타석 조건 필터링
-        df_cleaned = df[df[pa_col] >= self.min_pa].copy()
+        # 1. 필수 피처 목록 정의
+        required_features = ['condition_index', 'slope_1d', 'slope_3d', 'slope_7d', 'ops']
         
-        # 2. 결측치 처리 (직전 값으로 보간)
-        df_cleaned = df_cleaned.ffill()
+        for feature in required_features:
+            # 2. 결측치 식별
+            if df_processed[feature].isnull().any():
+                print(f"[알림] {feature} 피처 결측 발생. 시즌 평균으로 Fallback 적용.")
+                # 3. Fallback Logic: 시즌 평균값으로 대체
+                df_processed[feature] = df_processed[feature].fillna(self.season_averages[feature])
         
-        # 3. 이상치 제거 (IQR 기준)
-        df_final = self.handle_outliers(df_cleaned)
-        
-        return df_final
+        return df_processed
 
 # 모듈 사용 예시 (결과 확인용)
 if __name__ == "__main__":
-    raw_data = pd.DataFrame({
-        'pa': [1, 10, 15, 2, 20],  # 타석 수
-        'ops': [0.100, 0.750, 0.800, 2.000, 0.720]  # OPS (2.000은 이상치 가정)
+    # 시즌 평균 데이터 시뮬레이션
+    avg_data = {'condition_index': 0.0, 'slope_1d': 0.0, 'slope_3d': 0.0, 'slope_7d': 0.0, 'ops': 0.750}
+    
+    # 결측치가 포함된 데이터
+    data = pd.DataFrame({
+        'condition_index': [0.05, np.nan, 0.08],
+        'slope_1d': [0.1, -0.05, np.nan],
+        'slope_3d': [0.03, -0.01, 0.05],
+        'slope_7d': [0.01, 0.02, 0.01],
+        'ops': [0.8, 0.7, 0.9]
     })
     
-    cleaner = DataCleaner(min_pa=5)
-    cleaned_df = cleaner.clean_data(raw_data)
-    
-    print("정제된 데이터 결과:")
+    cleaner = DataCleaner(avg_data)
+    cleaned_df = cleaner.clean_data(data)
+    print("정제 완료된 데이터 (결측치 제거/대체):")
     print(cleaned_df)
