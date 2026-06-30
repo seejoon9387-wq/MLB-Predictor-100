@@ -13,37 +13,41 @@ def load_model():
 
 model = load_model()
 
-# 2. 실시간 경기 일정 데이터 (실제 데이터 연동 시 이 리스트만 업데이트하면 됩니다)
+# 2. 경기 일정 데이터 (15경기)
 data = {
-    "날짜/시간": ["06-30 18:30", "06-30 19:00", "06-30 18:30", "06-30 20:00", "06-30 21:00", "06-30 21:30"],
-    "홈 팀": ["LAD", "NYY", "CHC", "ATL", "SEA", "TEX"],
-    "원정 팀": ["SF", "BOS", "MIL", "PHI", "HOU", "OAK"]
+    "홈 팀": [f"Team{i}" for i in range(1, 16)],
+    "원정 팀": [f"Team{i+1}" for i in range(1, 16)]
 }
-df_schedule = pd.DataFrame(data)
+df = pd.DataFrame(data)
 
-# 3. 메인 UI
 st.title("⚾ MLB 예측 분석 엔진")
 
-# 실시간 경기 일정 표시
-st.subheader("🗓️ 실시간 경기 일정")
-st.table(df_schedule)
+# 3. 탭을 이용한 경기 일정 표시 (15경기를 5개씩 3개 탭으로 분할)
+st.subheader("🗓️ 전체 경기 일정 (15경기)")
+tab1, tab2, tab3 = st.tabs(["1~5경기", "6~10경기", "11~15경기"])
 
-# 경기 선택 및 데이터 연동
-st.subheader("✅ 분석할 경기 선택")
-selected_match = st.selectbox("일정에서 경기를 선택하세요:", df_schedule["홈 팀"] + " vs " + df_schedule["원정 팀"])
+with tab1:
+    st.table(df.iloc[0:5])
+with tab2:
+    st.table(df.iloc[5:10])
+with tab3:
+    st.table(df.iloc[10:15])
 
-# 선택 시 자동으로 세션 상태 업데이트
+# 4. 분석할 경기 선택
+st.subheader("✅ 경기 선택 및 분석")
+match_list = [f"{row['홈 팀']} vs {row['원정 팀']}" for _, row in df.iterrows()]
+selected = st.selectbox("분석할 경기를 선택하세요:", match_list)
+
+if 'target_home' not in st.session_state: st.session_state.target_home = "Team1"
+if 'target_away' not in st.session_state: st.session_state.target_away = "Team2"
+
 if st.button("경기 정보 가져오기"):
-    home_name = selected_match.split(" vs ")[0]
-    away_name = selected_match.split(" vs ")[1]
-    st.session_state.target_home = home_name
-    st.session_state.target_away = away_name
+    h, a = selected.split(" vs ")
+    st.session_state.target_home = h
+    st.session_state.target_away = a
     st.rerun()
 
-# 4. 분석 입력 영역
-if 'target_home' not in st.session_state: st.session_state.target_home = "LAD"
-if 'target_away' not in st.session_state: st.session_state.target_away = "SF"
-
+# 5. 데이터 입력 영역
 st.divider()
 st.sidebar.header("📊 데이터 입력")
 home = st.sidebar.text_input("홈 팀", value=st.session_state.target_home)
@@ -55,7 +59,7 @@ rs = st.sidebar.number_input("Release Speed", value=90.0)
 hs = st.sidebar.number_input("Hyper Speed", value=100.0)
 re = st.sidebar.number_input("Release Extension", value=6.0)
 
-# 5. 분석 실행
+# 6. 분석 실행
 if st.button("🚀 결과 분석 실행", type="primary"):
     if model:
         input_data = pd.DataFrame([[la, bs, rs, hs, re]], 
