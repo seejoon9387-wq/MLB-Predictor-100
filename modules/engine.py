@@ -4,6 +4,7 @@ import pandas as pd
 from modules.data_loader import prepare_inference_features
 from modules.matchup import get_team_matchup_adjustment
 from modules.stamina_engine import get_stamina_adjustment
+from modules.weather_engine import get_climate_adjustment
 
 class SabermetricsEngine:
     def __init__(self, model_path="models/mlb_model.pkl"):
@@ -20,13 +21,14 @@ class SabermetricsEngine:
         features_df = pd.DataFrame([processed_data])
         raw_prob = self.model.predict_proba(features_df)[0][1]
         
-        # 3. 보정 적용 (상성 + 피로도)
+        # 3. 보정 엔진 적용 (상성 + 피로도 + 날씨)
         lineup_df = pd.DataFrame(data.get('lineup', []))
         matchup_adj = get_team_matchup_adjustment(lineup_df)
         stamina_adj = get_stamina_adjustment(data.get('pitcher_stamina', {}))
+        weather_adj = get_climate_adjustment(data.get('weather', {}))
         
         # 최종 확률 계산
-        final_prob = raw_prob + matchup_adj + stamina_adj
+        final_prob = raw_prob + matchup_adj + stamina_adj + weather_adj
         final_prob = max(0.0, min(1.0, final_prob))
         
         return {
@@ -34,7 +36,8 @@ class SabermetricsEngine:
             "raw_prob": round(raw_prob * 100, 2),
             "adjustments": {
                 "matchup": round(matchup_adj * 100, 2),
-                "stamina": round(stamina_adj * 100, 2)
+                "stamina": round(stamina_adj * 100, 2),
+                "weather": round(weather_adj * 100, 2)
             },
             "status": "success"
         }
