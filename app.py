@@ -3,23 +3,27 @@ import pandas as pd
 import requests
 import io
 
-st.title("데이터 컬럼명 탐색기")
+st.title("MLB 데이터 로더 (Direct Mode)")
 
+# 구글 드라이브 파일 ID
 FILE_ID = "1iSbcXGYzInvd5LQ1jLqdq0MgMtTT09pw"
-DATA_URL = f"https://drive.google.com/uc?export=download&id={FILE_ID}"
+# 강제 다운로드 URL 형식
+DATA_URL = f"https://drive.usercontent.google.com/download?id={FILE_ID}&export=download&confirm=t"
 
 @st.cache_data
-def get_csv_columns(url):
-    # 첫 100줄만 읽어서 구조를 파악 (메모리 절약)
-    response = requests.get(url)
-    df = pd.read_csv(io.BytesIO(response.content), nrows=100)
-    return df.columns.tolist()
+def load_data(url):
+    # 헤더를 추가하여 브라우저처럼 인식하게 함
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        return pd.read_csv(io.BytesIO(response.content), nrows=100) # 일단 100줄만 읽어보자
+    else:
+        raise Exception(f"다운로드 실패. 상태 코드: {response.status_code}")
 
 try:
-    cols = get_csv_columns(DATA_URL)
-    st.write("### CSV 파일에 들어있는 실제 컬럼명들입니다:")
+    cols = load_data(DATA_URL).columns.tolist()
+    st.write("### 드디어 실제 컬럼명을 확인했습니다:")
     st.write(cols)
-    st.write("---")
-    st.write("위 목록에서 필요한 컬럼명을 복사해서 저에게 알려주세요!")
 except Exception as e:
     st.error(f"오류 발생: {e}")
