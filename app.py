@@ -72,3 +72,25 @@ else:
             st.plotly_chart(fig_scatter, use_container_width=True)
     else:
         st.warning("분석할 데이터 샘플(data_sample.csv)을 폴더에 추가하세요.")
+
+# [파일: app.py] 수정된 부분
+# ... (상단 코드 생략)
+
+    # 3. 사이드바 입력
+    st.sidebar.header("경기 및 타구 데이터 입력")
+    
+    # 팀 이름 입력창 추가
+    home_team = st.sidebar.text_input("홈 팀 이름", value="Home Team")
+    away_team = st.sidebar.text_input("원정 팀 이름", value="Away Team")
+    
+    st.sidebar.divider() # 구분선 추가
+    
+    launch_angle = st.sidebar.number_input("Launch Angle", value=15.0, step=0.1)
+    # ... (이하 나머지 입력값 동일)
+
+    # 4. 예측 실행
+    if st.button("안타 확률 예측 및 분석"):
+        st.subheader(f"경기 분석: {home_team} vs {away_team}") # 입력된 팀 이름 표시
+        input_data = pd.DataFrame([[launch_angle, bat_speed, release_speed, hyper_speed, release_extension]], 
+                                  columns=['launch_angle', 'bat_speed', 'release_speed', 'hyper_speed', 'release_extension'])
+        # ... (이하 동일)
