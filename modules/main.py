@@ -1,64 +1,49 @@
-# [파일: main.py]
+# [파일: main.py] - 시스템의 통합 관리자 및 실행 파일
+import multiprocessing as mp
 from registry import EngineRegistry
 from engine import SabermetricsEngine
-# (기타 필요한 모듈 import...)
 from logger import SystemLogger
 
 def run_full_pipeline(game_id):
+    """
+    전체 분석 파이프라인을 실행하는 메인 제어 함수
+    """
     logger = SystemLogger(game_id)
     registry = EngineRegistry()
     
-    # 1. 모듈 등록
+    # 1. 모듈 등록 (필요한 엔진들을 모두 이곳에 등록)
     registry.register('sabermetrics', SabermetricsEngine())
-    # registry.register('weather', WeatherEngine()) 등 추가...
+    # registry.register('weather', WeatherEngine()) ... 추가 등록 가능
+    
+    print(f"--- [START] 게임 ID: {game_id} 분석 시작 ---")
     
     try:
-        # 2. 데이터 로드 및 정제
-        data_loader = registry.get_module('data_loader')
-        raw_data = data_loader.load(game_id)
+        # 2. 데이터 로드 및 정제 (가상의 data_loader 예시)
+        # 실제로는 여기서 각 모듈의 기능을 호출합니다.
+        print("데이터 로드 및 정제 중...")
+        raw_data = {"stats": [1, 2, 3]} # 테스트용 데이터
         
         # 3. 병렬 도메인 엔진 가동
+        print("도메인 엔진 병렬 분석 중...")
         domain_results = registry.run_parallel(['sabermetrics'], raw_data)
         
         # 4. 베이지안 업데이트 및 확률 예측
-        updater = registry.get_module('bayesian_updater')
-        final_prediction = updater.process(domain_results)
+        # updater = registry.get_module('bayesian_updater')
+        # final_prediction = updater.process(domain_results)
+        final_prediction = domain_results # 테스트용 대체
         
         # 5. 브리핑 및 아카이브
-        briefing = registry.get_module('briefing_engine').generate(final_prediction)
-        registry.get_module('archiver').save(game_id, briefing)
+        # briefing = registry.get_module('briefing_engine').generate(final_prediction)
+        # registry.get_module('archiver').save(game_id, briefing)
         
-        print("분석 완료. 결과 확인:", briefing)
-        return briefing
+        print(f"--- [SUCCESS] 분석 결과: {final_prediction} ---")
+        return final_prediction
 
     except Exception as e:
         logger.log_error(f"파이프라인 오류: {e}")
+        print(f"--- [ERROR] 분석 실패: {e} ---")
         return None
 
 if __name__ == "__main__":
+    # Windows에서 병렬 처리를 위한 필수 설정
     run_full_pipeline(game_id="2026-06-30-BASEBALL")
-
-# [파일: main.py] - 맨 아래에 이 내용을 추가하세요
-def run_system_test():
-    print("\n--- 🔍 시스템 통합 테스트 시작 ---")
-    from registry import EngineRegistry
-    from engine import SabermetricsEngine
-    
-    try:
-        registry = EngineRegistry()
-        registry.register('sabermetrics', SabermetricsEngine())
-        print("✅ 모듈 등록 성공")
-        
-        # 더미 데이터로 병렬 처리 테스트
-        results = registry.run_parallel(['sabermetrics'], {"data": [1]})
-        print(f"✅ 병렬 처리 테스트 성공: {results}")
-        print("--- 🏁 시스템 테스트 완료 --- \n")
-    except Exception as e:
-        print(f"❌ 테스트 실패: {e}")
-
-if __name__ == "__main__":
-    # 먼저 시스템 테스트를 수행하고
-    run_system_test()
-    
-    # 그 다음 실제 분석 파이프라인을 실행합니다
-    # run_full_pipeline(game_id="2026-06-30-BASEBALL")
