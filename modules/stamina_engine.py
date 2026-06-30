@@ -1,26 +1,28 @@
-# modules/stamina_engine.py
 import pandas as pd
 
-def add_stamina_and_limit_features(df):
+def get_stamina_adjustment(pitcher_data):
     """
-    투구수와 이닝 소화력에 따른 피로도 및 한계치 모델링
+    투수의 피로도 정보를 받아 승률 보정치를 반환
+    pitcher_data 구조: {
+        'last_pitch_count': int,  # 최근 경기 투구 수
+        'days_rest': int          # 휴식 일수
+    }
     """
-    # 1. 투구 한계치 근접도 (현재 투구수 / 투수별 시즌 평균 한계 투구수)
-    # 1에 가까울수록 한계치 도달
-    df['pitch_limit_ratio'] = df['current_pitch_count'] / df['season_avg_pitch_limit']
+    pitch_count = pitcher_data.get('last_pitch_count', 0)
+    days_rest = pitcher_data.get('days_rest', 4)
     
-    # 2. 이닝 소화 효율성 (이닝당 평균 투구수 - NP/IP)
-    # 효율이 떨어질수록(값이 클수록) 피로도 급증
-    df['efficiency_index'] = df['current_pitch_count'] / df['innings_pitched'].replace(0, 1)
+    adjustment = 0.0
     
-    # 3. 누적 피로 지수 (최근 3경기 누적 투구수에 가중치 적용)
-    df = df.sort_values(['pitcher_id', 'date'])
-    df['cumulative_fatigue'] = df.groupby('pitcher_id')['current_pitch_count'].transform(
-        lambda x: x.rolling(3).sum()
-    )
-    
-    # 4. 종합 스태미나 지수 (모델 입력용)
-    # 한계치 비율과 효율성을 결합하여 0~1 사이로 정규화
-    df['stamina_index'] = (df['pitch_limit_ratio'] * 0.7 + (df['efficiency_index'] / 30) * 0.3)
-    
-    return df
+    # 1. 투구 수가 많으면 피로도 가중치 (마이너스 보정)
+    if pitch_count > 100:
+        adjustment -= 0.03
+    elif pitch_count > 80:
+        adjustment -= 0.01
+        
+    # 2. 휴식 일수가 짧으면 피로도 가중치 (마이너스 보정)
+    if days_rest < 3:
+        adjustment -= 0.02
+    elif days_rest >= 5:
+        adjustment += 0.01
+        
+    return max(-0.07, min(0.03, adjustment)) # 보정 범위 제한
