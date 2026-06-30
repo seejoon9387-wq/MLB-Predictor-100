@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.isotonic import IsotonicRegression
+from sklearn.metrics import mean_squared_error
 
 # 모듈 1: 결정론적 데이터 품질 관리
 class DataQualityManager:
@@ -31,14 +32,14 @@ class ProbabilisticModel:
     def predict(self, X):
         return {name: model.predict(X) for name, model in self.models.items()}
 
-# 모듈 3: 확률 보정 (Calibration)
-class ProbabilityCalibrator:
-    def __init__(self):
-        self.calibrator = IsotonicRegression(out_of_bounds='clip')
-    def fit(self, y_prob, y_true):
-        self.calibrator.fit(y_prob, y_true)
-    def calibrate(self, y_prob):
-        return self.calibrator.transform(y_prob)
+# 모듈 3: 평가 모듈 (추가됨)
+class PerformanceEvaluator:
+    @staticmethod
+    def evaluate(y_true, y_pred):
+        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+        # 예측값과 실제값의 차이 분포를 통한 단순 신뢰도 지표 계산
+        calibration_score = np.mean(np.abs(np.array(y_true) - np.array(y_pred)))
+        return {"RMSE": rmse, "Calibration_Error": calibration_score}
 
 # 모듈 4: 확장 윈도우 백테스팅 엔진
 class Backtester:
