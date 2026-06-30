@@ -9,41 +9,42 @@ st.set_page_config(page_title="MLB 예측 분석 엔진", layout="wide")
 # 1. 모델 로드
 @st.cache_resource
 def load_model():
-    return joblib.load('mlb_model.pkl') if os.path.exists('mlb_model.pkl') else None
+    if os.path.exists('mlb_model.pkl'):
+        return joblib.load('mlb_model.pkl')
+    return None
 
 model = load_model()
 
-st.title("⚾ MLB 예측 분석 엔진 v2.2")
-st.subheader("🗓️ 실시간 경기 일정")
-
-# 2. 경기 데이터 (안정적인 리스트)
+# 2. 경기 일정 데이터
 matches = [
     {"home": "LAD", "away": "SF", "time": "18:30"}, {"home": "NYY", "away": "BOS", "time": "19:00"},
     {"home": "CHC", "away": "MIL", "time": "18:30"}, {"home": "ATL", "away": "PHI", "time": "20:00"},
     {"home": "SEA", "away": "HOU", "time": "21:00"}, {"home": "TEX", "away": "OAK", "time": "21:30"}
 ]
 
-# 3. 경기 일정 표시 (기본 컴포넌트 사용)
+# 3. 경기 일정 표시 (기본 UI 사용)
+st.title("⚾ MLB 예측 분석 엔진 v2.2")
+st.subheader("🗓️ 실시간 경기 일정")
+
 if 'page' not in st.session_state: st.session_state.page = 0
 
-# 화살표 및 경기 목록
-c1, c2, c3, c4 = st.columns([1, 8, 8, 1])
+# 화살표와 3개의 경기를 기본 컴포넌트로 표시
+c1, c2, c3, c4, c5 = st.columns([1, 2, 2, 2, 1])
 
 with c1:
-    if st.button("◀️"): st.session_state.page = max(0, st.session_state.page - 1)
+    if st.button("◀️ 이전"): st.session_state.page = max(0, st.session_state.page - 1)
 
-# 경기 카드 표시 (기본 metric 컴포넌트 사용으로 오류 방지)
-current_matches = matches[st.session_state.page*3 : (st.session_state.page+1)*3]
-for i, match in enumerate([c2, c3, st.columns(3)[0]]): # 3개씩 표시
-    if i < len(current_matches):
-        with [c2, c3, st.columns(3)[0]][i]:
-            st.metric(label=f"{current_matches[i]['home']} vs {current_matches[i]['away']}", 
-                      value=current_matches[i]['time'])
+# 현재 페이지의 경기 보여주기 (3개씩)
+current = matches[st.session_state.page*3 : (st.session_state.page+1)*3]
+for i, col in enumerate([c2, c3, c4]):
+    if i < len(current):
+        with col:
+            st.metric(label=f"{current[i]['home']} vs {current[i]['away']}", value=current[i]['time'])
 
-with c4:
-    if st.button("▶️"): st.session_state.page += 1
+with c5:
+    if st.button("다음 ▶️"): st.session_state.page += 1
 
-# 4. 분석 기능
+# 4. 분석 실행
 st.divider()
 st.sidebar.header("📊 데이터 입력")
 home = st.sidebar.text_input("홈 팀", value="Home")
@@ -59,6 +60,12 @@ if st.button("🚀 결과 분석 실행"):
         input_data = pd.DataFrame([[la, bs, rs, hs, re]], 
                                   columns=['launch_angle', 'bat_speed', 'release_speed', 'hyper_speed', 'release_extension'])
         proba = model.predict_proba(input_data)[0][1]
-        st.write(f"### {home} vs {away} 안타 확률: {proba*100:.2f}%")
+        
+        st.subheader(f"결과: {home} vs {away}")
+        fig = go.Figure(go.Indicator(
+            mode="gauge+number", value=proba * 100, title={'text': "안타 확률 (%)"},
+            gauge={'axis': {'range': [0, 100]}}
+        ))
+        st.plotly_chart(fig)
     else:
-        st.error("모델 파일을 찾을 수 없습니다.")
+        st.error("모델 파일(mlb_model.pkl)을 찾을 수 없습니다.")
